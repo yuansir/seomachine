@@ -50,11 +50,15 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
 
   const handleSaveApiKeys = async () => {
     try {
-      if (claudeKeyInput) {
-        await setApiKey("claude", claudeKeyInput);
+      if (!claudeKeyInput.trim() && !dataforseoKeyInput.trim()) {
+        toast.error("请至少填写一个 API 密钥");
+        return;
       }
-      if (dataforseoKeyInput) {
-        await setApiKey("dataforseo", dataforseoKeyInput);
+      if (claudeKeyInput.trim()) {
+        await setApiKey("claude", claudeKeyInput.trim());
+      }
+      if (dataforseoKeyInput.trim()) {
+        await setApiKey("dataforseo", dataforseoKeyInput.trim());
       }
       toast.success("API 密钥已保存");
     } catch (error) {
@@ -64,7 +68,11 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
 
   const handleSaveWordPress = async () => {
     try {
-      await setWordPress(wpUrlInput, wpUsernameInput, wpPasswordInput);
+      if (!wpUrlInput.trim() || !wpUsernameInput.trim() || !wpPasswordInput.trim()) {
+        toast.error("请填写完整的 WordPress 配置信息");
+        return;
+      }
+      await setWordPress(wpUrlInput.trim(), wpUsernameInput.trim(), wpPasswordInput.trim());
       toast.success("WordPress 配置已保存");
     } catch (error) {
       toast.error("保存失败");
