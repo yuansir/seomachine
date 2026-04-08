@@ -1,10 +1,21 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      // Immediately apply theme to prevent flash of wrong theme
+      (function() {
+        const stored = localStorage.getItem("theme-storage");
+        const theme = stored ? JSON.parse(stored).state.theme : "system";
+        const resolved = theme === "system"
+          ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+          : theme;
+        document.documentElement.classList.add(resolved);
+      })();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + React + Typescript</title>
+    <title>SEO Machine</title>
   </head>
 
   <body>

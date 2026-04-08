@@ -3,12 +3,13 @@ import { Play, AlertCircle, CheckCircle, AlertTriangle, BarChart3 } from "lucide
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useAnalysisStore, type AnalysisType, type AnalysisResults } from "@/stores/useAnalysisStore";
 import { useEditorStore, type Article } from "@/stores/useEditorStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { EmptyAnalysis } from "@/components/features/EmptyState";
+import { ProgressBar } from "@/components/features/ProgressBar";
 
 // Mock articles for demo
 const mockArticles: Article[] = [
@@ -178,7 +179,7 @@ export function AnalysisPage() {
             )}
           </Button>
 
-          {isAnalyzing && <Progress value={progress} className="mt-2" />}
+          {isAnalyzing && <ProgressBar value={progress} />}
         </div>
 
         {/* Right: Results */}
@@ -256,13 +257,7 @@ export function AnalysisPage() {
               </Card>
             </>
           ) : (
-            <Card className="h-96 flex items-center justify-center">
-              <div className="text-center text-slate-400">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>分析结果将显示在这里</p>
-                <p className="text-sm mt-2">选择文章并点击"开始分析"</p>
-              </div>
-            </Card>
+            <EmptyAnalysis />
           )}
         </div>
       </div>

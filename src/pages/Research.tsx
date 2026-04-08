@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useResearchStore, type ResearchType } from "@/stores/useResearchStore";
 import { runResearch } from "@/lib/python";
 import { toast } from "sonner";
+import { EmptyResearch } from "@/components/features/EmptyState";
+import { ProgressBar } from "@/components/features/ProgressBar";
 
 export function ResearchPage() {
   const {
@@ -167,10 +168,7 @@ export function ResearchPage() {
           </Button>
 
           {isResearching && (
-            <div className="space-y-2">
-              <Progress value={progress || 50} />
-              <p className="text-sm text-slate-500 text-center">正在分析...</p>
-            </div>
+            <ProgressBar value={progress || 0} message="正在分析..." />
           )}
         </div>
 
@@ -241,13 +239,7 @@ export function ResearchPage() {
               </Card>
             </>
           ) : (
-            <Card className="h-96 flex items-center justify-center">
-              <div className="text-center text-slate-400">
-                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>研究结果将显示在这里</p>
-                <p className="text-sm mt-2">输入关键词并点击"开始研究"</p>
-              </div>
-            </Card>
+            <EmptyResearch />
           )}
         </div>
       </div>

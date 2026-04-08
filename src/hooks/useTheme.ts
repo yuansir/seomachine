@@ -6,6 +6,10 @@ export function useTheme() {
 
   useEffect(() => {
     const root = document.documentElement;
+
+    // Add transition class for smooth theme changes
+    root.classList.add("transition-colors", "duration-200");
+
     root.classList.remove("light", "dark");
 
     if (theme === "system") {

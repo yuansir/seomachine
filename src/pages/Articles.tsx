@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { FileText, Edit, Trash2, Search } from "lucide-react";
+import { Edit, Trash2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useEditorStore, type Article } from "@/stores/useEditorStore";
 import { toast } from "sonner";
+import { EmptySearch } from "@/components/features/EmptyState";
 
 // Mock articles
 const mockArticles: Article[] = [
@@ -86,12 +87,7 @@ export function ArticlesPage() {
       {/* Articles List */}
       <div className="space-y-4">
         {filteredArticles.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <FileText className="h-12 w-12 text-slate-300 mb-4" />
-              <p className="text-slate-500">没有找到文章</p>
-            </CardContent>
-          </Card>
+          <EmptySearch message="没有找到匹配的文章" />
         ) : (
           filteredArticles.map((article) => (
             <Card key={article.id} className="hover:border-slate-400 transition-colors">

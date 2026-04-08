@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { useWriteStore } from "@/stores/useWriteStore";
 import { useResearchStore } from "@/stores/useResearchStore";
 import { toast } from "sonner";
+import { EmptyArticle } from "@/components/features/EmptyState";
+import { ProgressBar } from "@/components/features/ProgressBar";
 
 export function WritePage() {
   const {
@@ -204,7 +205,7 @@ This article provides actionable insights.
             )}
           </Button>
 
-          {isGenerating && <Progress value={progress} className="mt-2" />}
+          {isGenerating && <ProgressBar value={progress} />}
         </div>
 
         {/* Right: Preview */}
@@ -233,12 +234,7 @@ This article provides actionable insights.
                   </pre>
                 </div>
               ) : (
-                <div className="h-96 flex items-center justify-center text-slate-400">
-                  <div className="text-center">
-                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>生成的文章将显示在这里</p>
-                  </div>
-                </div>
+                <EmptyArticle />
               )}
             </CardContent>
           </Card>
