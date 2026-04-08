@@ -1,0 +1,99 @@
+import { create } from "zustand";
+import type { ResearchResult } from "./useResearchStore";
+
+export type ArticleLength = "short" | "medium" | "long";
+export type ContentStyle = "professional" | "conversational" | "technical";
+
+export interface ArticleConfig {
+  title: string;
+  length: ArticleLength;
+  style: ContentStyle;
+}
+
+export interface GeneratedArticle {
+  id: string;
+  title: string;
+  content: string;
+  briefId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface WriteState {
+  selectedBrief: ResearchResult | null;
+  articleConfig: ArticleConfig;
+  generatedContent: string;
+  isGenerating: boolean;
+  progress: number;
+  generationId: string | null;
+  error: string | null;
+
+  selectBrief: (brief: ResearchResult | null) => void;
+  updateConfig: (config: Partial<ArticleConfig>) => void;
+  setGeneratedContent: (content: string) => void;
+  setIsGenerating: (isGenerating: boolean) => void;
+  setProgress: (progress: number) => void;
+  setError: (error: string | null) => void;
+  saveArticle: () => Promise<GeneratedArticle | null>;
+  reset: () => void;
+}
+
+const initialConfig: ArticleConfig = {
+  title: "",
+  length: "medium",
+  style: "professional",
+};
+
+export const useWriteStore = create<WriteState>()((set, get) => ({
+  selectedBrief: null,
+  articleConfig: initialConfig,
+  generatedContent: "",
+  isGenerating: false,
+  progress: 0,
+  generationId: null,
+  error: null,
+
+  selectBrief: (brief) => set({ selectedBrief: brief }),
+
+  updateConfig: (config) =>
+    set((state) => ({
+      articleConfig: { ...state.articleConfig, ...config },
+    })),
+
+  setGeneratedContent: (content) => set({ generatedContent: content }),
+
+  setIsGenerating: (isGenerating) => set({ isGenerating }),
+
+  setProgress: (progress) => set({ progress }),
+
+  setError: (error) => set({ error }),
+
+  saveArticle: async () => {
+    const { generatedContent, articleConfig } = get();
+    if (!generatedContent) return null;
+
+    const article: GeneratedArticle = {
+      id: crypto.randomUUID(),
+      title: articleConfig.title || "Untitled Article",
+      content: generatedContent,
+      briefId: get().selectedBrief?.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // TODO: Save to database via Rust command
+    console.log("Article saved:", article);
+    return article;
+  },
+
+  reset: () =>
+    set({
+      selectedBrief: null,
+      articleConfig: initialConfig,
+      generatedContent: "",
+      isGenerating: false,
+      progress: 0,
+      generationId: null,
+      error: null,
+    }),
+}));

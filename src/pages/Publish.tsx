@@ -1,0 +1,241 @@
+import { useState, useEffect } from "react";
+import { Upload, CheckCircle, XCircle, Loader2, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useEditorStore, type Article } from "@/stores/useEditorStore";
+import { toast } from "sonner";
+
+interface PublishResult {
+  success: boolean;
+  post_id?: number;
+  url?: string;
+  message: string;
+}
+
+// Mock articles for demo
+const mockArticles: Article[] = [
+  { id: "1", title: "SEO 最佳实践指南", content: "# SEO 最佳实践...\n\n这是一篇关于 SEO 的文章...", status: "draft", createdAt: "2024-01-15", updatedAt: "2024-01-15" },
+  { id: "2", title: "内容营销完整教程", content: "# 内容营销...\n\n内容营销是...", status: "draft", createdAt: "2024-01-10", updatedAt: "2024-01-12" },
+];
+
+export function PublishPage() {
+  const { currentArticle } = useEditorStore();
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<PublishResult | null>(null);
+  const [wpStatus, setWpStatus] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    checkWordPressStatus();
+  }, []);
+
+  const checkWordPressStatus = async () => {
+    if (!window.__TAURI__) {
+      setWpStatus(false);
+      return;
+    }
+    try {
+      const status = await window.__TAURI__.core.invoke<boolean>("check_wordpress_status");
+      setWpStatus(status);
+    } catch {
+      setWpStatus(false);
+    }
+  };
+
+  const handleSelectArticle = (id: string) => {
+    const article = mockArticles.find((a) => a.id === id);
+    setSelectedArticle(article || null);
+    setPublishResult(null);
+  };
+
+  const handlePublish = async (status: "publish" | "draft") => {
+    const article = selectedArticle || currentArticle;
+    if (!article) {
+      toast.error("请先选择要发布的文章");
+      return;
+    }
+
+    if (!window.__TAURI__) {
+      toast.error("Tauri 未初始化");
+      return;
+    }
+
+    setIsPublishing(true);
+    setPublishResult(null);
+
+    try {
+      const result = await window.__TAURI__.core.invoke<PublishResult>("publish_to_wordpress", {
+        title: article.title,
+        content: article.content,
+        status: status,
+      });
+      setPublishResult(result);
+      if (result.success) {
+        toast.success("发布成功！");
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      setPublishResult({
+        success: false,
+        message: `发布失败: ${error}`,
+      });
+      toast.error("发布失败");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  return (
+    <div className="container mx-auto py-8 px-4 max-w-4xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold mb-2">发布到 WordPress</h1>
+        <p className="text-slate-500">将文章发布到你的 WordPress 网站</p>
+      </div>
+
+      {/* WordPress Status */}
+      <Card className="mb-6">
+        <CardContent className="flex items-center justify-between py-4">
+          <div className="flex items-center gap-3">
+            {wpStatus === null ? (
+              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            ) : wpStatus ? (
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-500" />
+            )}
+            <div>
+              <div className="font-medium">WordPress 连接状态</div>
+              <div className="text-sm text-slate-500">
+                {wpStatus === null
+                  ? "检查中..."
+                  : wpStatus
+                  ? "已连接"
+                  : "未连接，请在设置中配置"}
+              </div>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={checkWordPressStatus}>
+            重新检查
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Article Selection */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>选择文章</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Select
+            value={selectedArticle?.id || ""}
+            onValueChange={(v) => v && handleSelectArticle(v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="选择文章..." />
+            </SelectTrigger>
+            <SelectContent>
+              {mockArticles.map((article) => (
+                <SelectItem key={article.id} value={article.id}>
+                  {article.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {selectedArticle && (
+            <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-medium">{selectedArticle.title}</h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    创建于 {selectedArticle.createdAt}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    字数: {selectedArticle.content.length} 字
+                  </p>
+                </div>
+                <Badge variant={selectedArticle.status === "published" ? "default" : "secondary"}>
+                  {selectedArticle.status === "published" ? "已发布" : "草稿"}
+                </Badge>
+              </div>
+              <div className="mt-3 text-sm text-slate-600 dark:text-slate-300 line-clamp-3">
+                {selectedArticle.content.slice(0, 200)}...
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Publish Actions */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>发布选项</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <Button
+              onClick={() => handlePublish("publish")}
+              disabled={isPublishing || (!selectedArticle && !currentArticle) || !wpStatus}
+              size="lg"
+            >
+              {isPublishing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  发布中...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  直接发布
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => handlePublish("draft")}
+              disabled={isPublishing || (!selectedArticle && !currentArticle) || !wpStatus}
+              variant="outline"
+              size="lg"
+            >
+              保存为草稿
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Publish Result */}
+      {publishResult && (
+        <Card className={publishResult.success ? "border-green-500" : "border-red-500"}>
+          <CardContent className="py-6">
+            <div className="flex items-start gap-4">
+              {publishResult.success ? (
+                <CheckCircle className="h-6 w-6 text-green-500 mt-0.5" />
+              ) : (
+                <XCircle className="h-6 w-6 text-red-500 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <h3 className={`font-medium ${publishResult.success ? "text-green-600" : "text-red-600"}`}>
+                  {publishResult.success ? "发布成功" : "发布失败"}
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">{publishResult.message}</p>
+                {publishResult.success && publishResult.url && (
+                  <a
+                    href={publishResult.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 mt-2 text-sm text-blue-500 hover:text-blue-600"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    查看文章
+                  </a>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

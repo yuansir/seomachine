@@ -1,37 +1,16 @@
 {
-  "model_profile": "balanced",
-  "commit_docs": true,
-  "parallelization": true,
-  "search_gitignored": false,
-  "brave_search": false,
-  "firecrawl": false,
-  "exa_search": false,
-  "git": {
-    "branching_strategy": "none",
-    "phase_branch_template": "gsd/phase-{phase}-{slug}",
-    "milestone_branch_template": "gsd/{milestone}-{slug}",
-    "quick_branch_template": null
-  },
-  "workflow": {
-    "research": true,
-    "plan_check": true,
-    "verifier": true,
-    "nyquist_validation": true,
-    "auto_advance": true,
-    "node_repair": true,
-    "node_repair_budget": 2,
-    "ui_phase": true,
-    "ui_safety_gate": true,
-    "text_mode": false,
-    "research_before_questions": false,
-    "discuss_mode": "discuss",
-    "skip_discuss": false
-  },
-  "hooks": {
-    "context_warnings": true
-  },
-  "agent_skills": {},
-  "resolve_model_ids": "omit",
-  "mode": "yolo",
-  "granularity": "standard"
+  "workflow": "new-project",
+  "granularity": "medium",
+  "gitStrategy": "main-only",
+  "agentMode": "parallel",
+  "autoApproved": false,
+  "createdAt": "2026-04-08",
+  "projectName": "SEO Machine Tauri",
+  "projectType": "desktop-app",
+  "techStack": {
+    "frontend": ["React 18.x", "TypeScript 5.x", "Vite 6.x", "TailwindCSS 4.x", "shadcn/ui", "Zustand 5.x"],
+    "backend": ["Tauri 2.x", "Rust"],
+    "database": ["SQLite (tauri-plugin-sql)"],
+    "python": ["Python 3.10+", "DataForSEO client", "NLTK", "TextStat", "scikit-learn"]
+  }
 }

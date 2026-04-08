@@ -1,83 +1,130 @@
-# SEO Machine — Tauri 桌面客户端
+# SEO Machine Tauri 桌面应用项目
 
-## 这是什么
+## 项目概述
 
-SEO Machine 是一个基于 Claude Code 的 SEO 内容创作工作空间，通过自定义命令（`/research`、`/write`、`/analyze` 等）和专业代理，帮助用户研究、撰写、分析和优化 SEO 友好的长篇博客内容。
+将 SEO Machine（一个基于 Claude Code 的 SEO 内容创作工具）转换为 Tauri 桌面客户端，让用户无需使用命令行即可完成 SEO 内容创作工作。
 
-**核心价值主张：** 让任何企业都能轻松创建排名靠前的 SEO 优化内容，无需专业 SEO 知识。
+### 源项目信息
+- **GitHub**: https://github.com/TheCraigHewitt/seomachine
+- **Stars**: 3,924
+- **语言**: Python (Claude Code 工作空间)
+- **功能**: SEO 关键词研究、文章撰写、内容优化、数据分析、WordPress 发布
 
-## 为什么要做成 Tauri 桌面应用
-
-### 原始项目的问题
-1. **依赖 Claude Code**：用户必须安装并熟悉 Claude Code CLI
-2. **命令行界面**：对非技术用户不友好
-3. **手动配置**：需要手动填写多个 context 文件（brand-voice.md, seo-guidelines.md 等）
-4. **分散的工作流**：研究、起草、优化分别在不同的目录中
-
-### Tauri 客户端的优势
-- **开箱即用**：用户下载安装即可，无需配置
-- **图形界面**：友好的 UI，操作直观
-- **本地化数据存储**：所有上下文配置本地管理
-- **跨平台**：Windows/Mac/Linux 均可运行
-- **调用 Claude API**：集成 AI 能力，用户只需提供自己的 API Key
-
-## 核心功能（保持不变）
-
-| 功能 | 描述 |
-|------|------|
-| `/research` | 关键词研究 + 竞争对手分析 |
-| `/write` | 生成 2000-3000+ 字 SEO 优化文章 |
-| `/analyze-existing` | 分析现有文章并给出更新建议 |
-| `/rewrite` | 基于分析重写/更新内容 |
-| `/optimize` | 全面 SEO 审核和优化 |
-
-## 数据集成（保留）
-
-- Google Analytics 4
-- Google Search Console
-- DataForSEO API（实时排名数据）
-- NLTK/TextStat（可读性分析）
-
-## 技术栈建议
-
-| 层级 | 技术选型 |
-|------|----------|
-| 前端 | React + TypeScript + TailwindCSS |
-| 桌面框架 | Tauri 2.x（Rust 后端） |
-| AI 集成 | 直接调用 Claude API |
-| 本地存储 | SQLite（配置、文章、项目数据） |
-| Python 桥接 | Tauri 命令调用 Python 脚本（可选） |
-
-## 目标用户
-
-1. **中小企业主**：需要持续产出 SEO 内容但无专业团队
-2. **内容营销人员**：希望提高内容产出效率和质量
-3. **独立博主**：想要提升文章搜索排名
-
-## 关键决策
-
-| 决策 | 理由 | 状态 |
-|------|------|------|
-| 使用 Tauri 而非 Electron | 更小包体、更高性能、更安全 | 待定 |
-| React 前端 | 生态丰富、组件多 | 待定 |
-| 用户自备 API Key | 避免_token成本和账户管理复杂性 | 待定 |
-| 本地存储配置 | 用户数据隐私，离线可用性 | 待定 |
-
-## 项目范围
-
-### 包含
-- 研究代理（Research Agent）
-- 写作代理（Write Agent）
-- 分析代理（Analyze Agent）
-- 优化代理（Optimize Agent）
-- 用户配置界面（品牌声音、SEO 规则）
-- 文章管理和发布
-
-### 排除
-- WordPress/ CMS 直接发布（Phase 2）
-- 多用户协作（Phase 2+）
-- 云端同步（长期规划）
+### 核心价值主张
+将复杂的 SEO 内容创作流程封装为用户友好的桌面应用，一键安装即可使用。
 
 ---
 
-*最后更新：2026-04-08 项目初始化*
+## 技术决策
+
+### Tauri vs Electron 选择理由
+| 因素 | Tauri | Electron |
+|------|-------|----------|
+| 二进制大小 | ~600KB | ~150MB |
+| 内存占用 | 低 | 高 |
+| 安全性 | Rust 原生审计 | 需要额外配置 |
+| Python 集成 | 通过 std::process::Command | 可行但重量级 |
+| 系统资源 | 极低 | 较高 |
+
+**决策**: Tauri 2.x ✅
+
+### 技术栈
+| 组件 | 选择 | 版本 |
+|------|------|------|
+| 桌面框架 | Tauri | 2.x |
+| 前端框架 | React | 18.x |
+| 类型系统 | TypeScript | 5.x |
+| 构建工具 | Vite | 6.x |
+| 包管理器 | pnpm | 9.x |
+| UI 组件库 | shadcn/ui | latest |
+| 状态管理 | Zustand | 5.x |
+| 本地数据库 | SQLite (tauri-plugin-sql) | 2.x |
+| 持久化存储 | tauri-plugin-store | 2.x |
+| Python 集成 | Rust std::process::Command | - |
+
+### Python 脚本集成策略
+```rust
+#[tauri::command]
+fn run_seo_research(topic: String) -> Result<String, String> {
+    let output = std::process::Command::new("python3")
+        .arg("research_quick_wins.py")
+        .arg(&topic)
+        .current_dir("./python-scripts")
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    String::from_utf8(output.stdout).map_err(|e| e.to_string())
+}
+```
+
+---
+
+## 项目边界
+
+### 包含范围
+1. 主题研究界面（输入主题 → 研究脚本 → 展示简报）
+2. 文章撰写界面（调用 Claude API → 生成文章）
+3. 文章编辑器（查看、编辑、导出 Markdown/HTML）
+4. SEO 分析面板（关键词密度、可读性、质量评分）
+5. WordPress 发布功能
+6. 本地数据库存储（文章、研究报告、项目配置）
+7. API 密钥安全管理
+
+### 不包含范围（Phase 1-3）
+- WordPress 站点管理（多站点支持）
+- 批量文章处理
+- 自动化定时发布
+- 团队协作功能
+- 云端同步
+
+---
+
+## 用户体验目标
+
+### 安装体验
+- 下载安装包 → 双击安装 → 打开应用 → 开始使用
+- 无需配置 Python 环境（打包 Python 运行时）
+- 无需命令行操作
+
+### 核心工作流
+```
+1. 设置 API 密钥（一次配置）
+       ↓
+2. 输入主题，开始研究
+       ↓
+3. 查看研究简报，确认方向
+       ↓
+4. 一键生成文章
+       ↓
+5. 编辑器中查看和修改
+       ↓
+6. SEO 分析 → 优化建议
+       ↓
+7. 发布到 WordPress
+```
+
+### UI 设计方向
+- **主题**: 深色模式为主（符合内容创作者习惯）
+- **风格**: 简洁文档风格，减少干扰，突出内容
+- **布局**: 左侧导航 + 右侧内容区
+- **字体**: 等宽字体用于编辑器，衬线字体用于阅读
+
+---
+
+## 成功标准
+
+### 功能验收
+- [ ] 用户可以在 5 分钟内完成安装并运行
+- [ ] 主题研究功能在 30 秒内返回结果
+- [ ] 文章生成功能正常工作
+- [ ] 文章可以成功发布到 WordPress
+- [ ] SEO 分析面板显示准确的评分和建议
+
+### 性能指标
+- 应用启动时间 < 3 秒
+- 研究脚本执行 < 30 秒
+- 界面响应时间 < 100ms
+
+### 用户满意度
+- 界面直观，无需文档即可上手
+- 错误信息清晰，解决问题容易
