@@ -131,11 +131,11 @@
 ## 三、Milestone v1.1 新增需求：LLM 集成
 
 ### 3.10 LLM 提供商支持
-- [ ] **LLM-01**: DeepSeek API 集成
-- [ ] **LLM-02**: OpenAI 兼容 API 集成（支持硅基流动等）
-- [ ] **LLM-03**: LLM 提供商选择界面（Claude / DeepSeek / OpenAI）
-- [ ] **LLM-04**: API 密钥和 Base URL 配置
-- [ ] **LLM-05**: 模型参数配置（temperature, max_tokens）
+- [x] **LLM-01**: DeepSeek API 集成
+- [x] **LLM-02**: OpenAI 兼容 API 集成（支持硅基流动等）
+- [x] **LLM-03**: LLM 提供商选择界面（Claude / DeepSeek / OpenAI）
+- [x] **LLM-04**: API 密钥和 Base URL 配置
+- [x] **LLM-05**: 模型参数配置（temperature, max_tokens）
 - [ ] **LLM-06**: 文章生成真实调用 LLM
 - [ ] **LLM-07**: 生成进度显示
 

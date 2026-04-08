@@ -184,55 +184,18 @@ Plans:
 
 ---
 
-## 关键依赖关系
-
-```
-Phase 1 (基础框架)
-    ↓
-Phase 2 (核心功能) ← 需要 Phase 1 完成
-    ↓
-Phase 3 (SEO与发布) ← 需要 Phase 2 完成
-    ↓
-Phase 4 (打磨发布) ← 需要 Phase 3 完成
-```
-
----
-
-## 技术风险与缓解
-
-| 风险 | 影响 | 缓解措施 |
-|------|------|----------|
-| Python 打包复杂 | 高 | 使用 PyInstaller 或 embedding，提前测试 |
-| Claude API 成本 | 中 | 实现缓存，限制生成频率 |
-| 跨平台打包差异 | 中 | 分别在各平台测试，使用 GitHub Actions CI |
-| SEO 分析性能 | 低 | Python 脚本优化，添加进度显示 |
-
----
-
-## 成功指标
-
-### Phase 1 完成时
-- [ ] 应用骨架可运行
-- [ ] 导航和主题切换正常
-
-### Phase 2 完成时
-- [ ] 研究 → 撰写 → 编辑流程可跑通
-- [ ] 文章可正常生成和保存
-
-### Phase 3 完成时
-- [ ] SEO 分析面板正常显示
-- [ ] WordPress 发布成功
-
-### Phase 4 完成时
-- [ ] 应用可打包发布
-- [ ] 用户可正常安装使用
-
----
-
 ## Phase 5: LLM 集成（v1.1）
 
 ### 目标
 实现真实的 LLM 调用，支持 DeepSeek 等 OpenAI 兼容模型，替换现有的占位符实现。
+
+### Plans
+**Plans:** 1/3 plans executed
+
+Plans:
+- [x] 05-01-PLAN.md - LLM Provider Infrastructure (types, providers, store)
+- [ ] 05-02-PLAN.md - Settings UI Updates (provider selection, API key, parameters)
+- [ ] 05-03-PLAN.md - Write.tsx Integration (real LLM calls, streaming, cancel)
 
 ### 任务分解
 
