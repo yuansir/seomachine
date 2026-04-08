@@ -16,6 +16,7 @@ interface EditorState {
   isDirty: boolean;
   history: string[];
   historyIndex: number;
+  error: string | null;
 
   loadArticle: (article: Article) => void;
   updateContent: (content: string) => void;
@@ -23,6 +24,8 @@ interface EditorState {
   undo: () => void;
   redo: () => void;
   reset: () => void;
+  handleEditorError: (error: unknown) => void;
+  clearError: () => void;
 }
 
 const MAX_HISTORY = 50;
@@ -33,6 +36,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   isDirty: false,
   history: [""],
   historyIndex: 0,
+  error: null,
 
   loadArticle: (article) => {
     set({
@@ -41,6 +45,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       isDirty: false,
       history: [article.content],
       historyIndex: 0,
+      error: null,
     });
   },
 
@@ -110,6 +115,16 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       isDirty: false,
       history: [""],
       historyIndex: 0,
+      error: null,
     });
+  },
+
+  handleEditorError: (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    set({ error: message });
+  },
+
+  clearError: () => {
+    set({ error: null });
   },
 }));

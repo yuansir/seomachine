@@ -42,6 +42,7 @@ interface ResearchState {
   setProgress: (progress: number) => void;
   setError: (error: string | null) => void;
   clearResults: () => void;
+  handleResearchError: (error: unknown) => void;
 }
 
 export const useResearchStore = create<ResearchState>()((set) => ({
@@ -59,4 +60,8 @@ export const useResearchStore = create<ResearchState>()((set) => ({
   setProgress: (progress) => set({ progress }),
   setError: (error) => set({ error }),
   clearResults: () => set({ results: null, error: null }),
+  handleResearchError: (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    set({ error: message, isResearching: false, progress: 0 });
+  },
 }));

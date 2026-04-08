@@ -34,6 +34,7 @@ interface WriteState {
   setIsGenerating: (isGenerating: boolean) => void;
   setProgress: (progress: number) => void;
   setError: (error: string | null) => void;
+  handleWriteError: (error: unknown) => void;
   saveArticle: () => Promise<GeneratedArticle | null>;
   reset: () => void;
 }
@@ -67,6 +68,11 @@ export const useWriteStore = create<WriteState>()((set, get) => ({
   setProgress: (progress) => set({ progress }),
 
   setError: (error) => set({ error }),
+
+  handleWriteError: (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    set({ error: message, isGenerating: false, progress: 0 });
+  },
 
   saveArticle: async () => {
     const { generatedContent, articleConfig } = get();

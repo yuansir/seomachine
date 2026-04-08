@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { toast } from "sonner";
 import type { ResearchResult, ResearchType } from "@/stores/useResearchStore";
 
 interface ProgressPayload {
@@ -26,13 +27,30 @@ export async function runResearch(
   });
 
   try {
-    const result = await invoke<string>("run_python_script", {
+    // Use toast.promise for loading/success/error handling
+    const invokePromise = invoke<string>("run_python_script", {
       script,
       args,
     });
 
+    const result = await toast.promise(
+      invokePromise,
+      {
+        loading: "正在研究...",
+        success: () => {
+          unlisten();
+          return "研究完成";
+        },
+        error: (err) => {
+          unlisten();
+          return `研究失败: ${err}`;
+        },
+      }
+    );
+
     // Parse the JSON output from Python script
-    const parsed = JSON.parse(result);
+    const resultStr = result as string;
+    const parsed = JSON.parse(resultStr);
 
     return {
       id: crypto.randomUUID(),
@@ -42,10 +60,12 @@ export async function runResearch(
       seoScore: parsed.seo_score || 0,
       topCompetitors: parsed.top_competitors || [],
       generatedAt: new Date().toISOString(),
-      rawOutput: result,
+      rawOutput: resultStr,
     };
-  } finally {
+  } catch (error) {
+    // Error is already handled by toast.promise, but we need to re-throw for the store
     unlisten();
+    throw error;
   }
 }
 

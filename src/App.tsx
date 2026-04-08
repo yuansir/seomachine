@@ -9,6 +9,7 @@ import { EditorPage } from "@/pages/Editor";
 import { AnalysisPage } from "@/pages/Analysis";
 import { PublishPage } from "@/pages/Publish";
 import { ArticlesPage } from "@/pages/Articles";
+import { GlobalErrorBoundary } from "@/components/features/ErrorBoundary";
 
 type Page = "home" | "research" | "write" | "editor" | "analysis" | "publish" | "articles" | "settings";
 
@@ -70,7 +71,7 @@ function App() {
   };
 
   return (
-    <>
+    <GlobalErrorBoundary>
       <AppShell onOpenSettings={handleOpenSettings}>
         <div className="p-6">
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
@@ -125,7 +126,7 @@ function App() {
       </AppShell>
 
       <SettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />
-    </>
+    </GlobalErrorBoundary>
   );
 }
 
