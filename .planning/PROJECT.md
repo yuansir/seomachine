@@ -1,5 +1,37 @@
 # SEO Machine Tauri 桌面应用项目
 
+## Current Milestone: v1.1 LLM 集成
+
+**Goal**: 实现真实的 LLM 调用，支持 DeepSeek 等 OpenAI 兼容模型，替换现有的占位符实现
+
+**Target features:**
+- DeepSeek API 集成（OpenAI 兼容）
+- OpenAI API 兼容模型支持
+- LLM 提供商选择界面（Claude / DeepSeek / OpenAI）
+- 文章生成真实调用 LLM
+- 模型参数配置（temperature, max_tokens 等）
+
+---
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
+---
+
 ## 项目概述
 
 将 SEO Machine（一个基于 Claude Code 的 SEO 内容创作工具）转换为 Tauri 桌面客户端，让用户无需使用命令行即可完成 SEO 内容创作工作。
@@ -41,6 +73,7 @@
 | 本地数据库 | SQLite (tauri-plugin-sql) | 2.x |
 | 持久化存储 | tauri-plugin-store | 2.x |
 | Python 集成 | Rust std::process::Command | - |
+| LLM 提供商 | DeepSeek / OpenAI 兼容 API | - |
 
 ### Python 脚本集成策略
 ```rust
@@ -63,7 +96,7 @@ fn run_seo_research(topic: String) -> Result<String, String> {
 
 ### 包含范围
 1. 主题研究界面（输入主题 → 研究脚本 → 展示简报）
-2. 文章撰写界面（调用 Claude API → 生成文章）
+2. 文章撰写界面（调用 LLM API → 生成文章）
 3. 文章编辑器（查看、编辑、导出 Markdown/HTML）
 4. SEO 分析面板（关键词密度、可读性、质量评分）
 5. WordPress 发布功能
