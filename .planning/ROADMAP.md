@@ -190,12 +190,12 @@ Plans:
 实现真实的 LLM 调用，支持 DeepSeek 等 OpenAI 兼容模型，替换现有的占位符实现。
 
 ### Plans
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 05-01-PLAN.md - LLM Provider Infrastructure (types, providers, store)
 - [x] 05-02-PLAN.md - Settings UI Updates (provider selection, API key, parameters)
-- [ ] 05-03-PLAN.md - Write.tsx Integration (real LLM calls, streaming, cancel)
+- [x] 05-03-PLAN.md - Write.tsx Integration (real LLM calls, streaming, cancel)
 
 ### 任务分解
 

@@ -136,8 +136,8 @@
 - [x] **LLM-03**: LLM 提供商选择界面（Claude / DeepSeek / OpenAI）
 - [x] **LLM-04**: API 密钥和 Base URL 配置
 - [x] **LLM-05**: 模型参数配置（temperature, max_tokens）
-- [ ] **LLM-06**: 文章生成真实调用 LLM
-- [ ] **LLM-07**: 生成进度显示
+- [x] **LLM-06**: 文章生成真实调用 LLM
+- [x] **LLM-07**: 生成进度显示
 
 ---
 
