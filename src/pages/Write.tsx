@@ -1,14 +1,18 @@
 import { useState } from "react";
-import { Play, Save, FileText, Loader2 } from "lucide-react";
+import { Play, Save, FileText, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWriteStore } from "@/stores/useWriteStore";
 import { useResearchStore } from "@/stores/useResearchStore";
+import { useLLMProviderStore } from "@/stores/useLLMProviderStore";
+import { createDeepSeekProvider, createOpenAICompatProvider } from "@/lib/llm";
+import type { LLMMessage } from "@/lib/llm/types";
 import { toast } from "sonner";
 import { EmptyArticle } from "@/components/features/EmptyState";
 import { ProgressBar } from "@/components/features/ProgressBar";
+import type { ResearchBrief, ArticleConfig } from "@/stores/useWriteStore";
 
 export function WritePage() {
   const {
@@ -27,6 +31,7 @@ export function WritePage() {
 
   const { results: savedResearch } = useResearchStore();
   const [isSaving, setIsSaving] = useState(false);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const handleSelectBrief = (briefId: string) => {
     if (savedResearch && savedResearch.id === briefId) {
@@ -40,42 +45,78 @@ export function WritePage() {
       return;
     }
 
+    const config = useLLMProviderStore.getState();
+    if (!config.isConfigured) {
+      toast.error("请先在设置中配置 LLM API 密钥");
+      return;
+    }
+
+    // Create abort controller
+    const controller = new AbortController();
+    setAbortController(controller);
+
     setIsGenerating(true);
     setProgress(0);
+    setGeneratedContent('');
 
     try {
-      // Simulate generation progress
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setProgress(i);
-      }
+      // Build messages from research brief
+      const messages: LLMMessage[] = buildArticlePrompt(selectedBrief, articleConfig);
 
-      // Placeholder for generated content
-      const generated = `# ${articleConfig.title || selectedBrief?.keywords[0]?.keyword || "Generated Article"}
+      // Create provider based on selection
+      const provider = config.provider === 'deepseek'
+        ? createDeepSeekProvider(config.getConfig())
+        : createOpenAICompatProvider(config.getConfig());
 
-This is a placeholder for the generated article content. In a full implementation, this would call the Claude API.
-
-## Introduction
-
-Based on the research data, this article aims to provide comprehensive coverage.
-
-## Key Points
-
-${selectedBrief?.contentSuggestions.map((s) => `- ${s.title}`).join("\n") || "- Point 1\n- Point 2"}
-
-## Conclusion
-
-This article provides actionable insights.
-`;
+      // Generate with streaming
+      const generated = await provider.generate(messages, {
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        signal: controller.signal,
+        onChunk: (text) => {
+          setGeneratedContent(text);
+        },
+        onProgress: (progress) => {
+          setProgress(progress);
+        },
+      });
 
       setGeneratedContent(generated);
       toast.success("文章生成完成！");
     } catch (error) {
-      toast.error(`生成失败: ${error}`);
+      if (error instanceof Error && error.name === 'AbortError') {
+        toast.info("生成已取消");
+      } else {
+        toast.error(`生成失败: ${error}`);
+      }
     } finally {
       setIsGenerating(false);
+      setAbortController(null);
     }
   };
+
+  // Helper function to build prompt from research brief
+  function buildArticlePrompt(brief: ResearchBrief | null, config: ArticleConfig): LLMMessage[] {
+    const systemPrompt = `你是一个专业的SEO文章写作助手。请根据用户提供的关键词和研究数据，生成一篇SEO优化的高质量文章。
+
+要求：
+- 文章结构清晰，包含H1、H2、H3标题
+- 内容深度足够，有实际价值
+- 适当融入关键词，但不要堆砌
+- 包含内部链接和外部链接的建议位置
+- 字数要求：短篇约500字，中篇约1000字，长篇约2000字`;
+
+    const userContent = brief
+      ? `关键词：${brief.keywords.map(k => k.keyword).join(', ')}
+SEO评分：${brief.seoScore}/100
+内容建议：${brief.contentSuggestions.map(s => `- ${s.title}: ${s.description}`).join('\n')}`
+      : `文章标题：${config.title}`;
+
+    return [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+    ];
+  }
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -187,15 +228,16 @@ This article provides actionable insights.
           </Card>
 
           <Button
-            onClick={handleGenerate}
-            disabled={isGenerating}
+            onClick={isGenerating ? () => abortController?.abort() : handleGenerate}
+            disabled={!isGenerating && !selectedBrief && !articleConfig.title}
             className="w-full"
             size="lg"
+            variant={isGenerating ? "destructive" : "default"}
           >
             {isGenerating ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                生成中... {progress}%
+                <X className="h-4 w-4 mr-2" />
+                取消生成
               </>
             ) : (
               <>
