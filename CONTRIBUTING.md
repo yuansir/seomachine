@@ -14,7 +14,7 @@
 ### 本地运行
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/seomachine.git
+git clone https://github.com/yuansir/seomachine.git
 cd seomachine
 
 # 安装前端依赖

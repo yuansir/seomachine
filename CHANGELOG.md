@@ -30,5 +30,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tauri-plugin-sql` v2 SQLite 数据库，含迁移自动运行
 - Rust tokio 后端，Python 脚本通过 subprocess 调用（含 60s 超时保护）
 
-[Unreleased]: https://github.com/YOUR_USERNAME/seomachine/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/YOUR_USERNAME/seomachine/releases/tag/v0.1.0
+[Unreleased]: https://github.com/yuansir/seomachine/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/yuansir/seomachine/releases/tag/v0.1.0

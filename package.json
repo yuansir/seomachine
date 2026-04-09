@@ -6,12 +6,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/seomachine.git"
+    "url": "https://github.com/yuansir/seomachine.git"
   },
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/seomachine/issues"
+    "url": "https://github.com/yuansir/seomachine/issues"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/seomachine#readme",
+  "homepage": "https://github.com/yuansir/seomachine#readme",
   "type": "module",
   "scripts": {
     "dev": "vite",

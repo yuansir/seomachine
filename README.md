@@ -5,13 +5,13 @@
 **AI 驱动的 SEO 内容创作桌面应用**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](https://github.com/YOUR_USERNAME/seomachine/releases)
+[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](https://github.com/yuansir/seomachine/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](#installation)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri-24C8D8.svg)](https://tauri.app)
 
 关键词研究 · AI 辅助写作 · SEO 分析 · WordPress 一键发布
 
-[下载](https://github.com/YOUR_USERNAME/seomachine/releases) · [报告 Bug](https://github.com/YOUR_USERNAME/seomachine/issues/new?template=bug_report.md) · [功能请求](https://github.com/YOUR_USERNAME/seomachine/issues/new?template=feature_request.md)
+[下载](https://github.com/yuansir/seomachine/releases) · [报告 Bug](https://github.com/yuansir/seomachine/issues/new?template=bug_report.yml) · [功能请求](https://github.com/yuansir/seomachine/issues/new?template=feature_request.yml)
 
 </div>
 
@@ -34,17 +34,29 @@
 
 ## 📦 安装
 
-### macOS
+> 所有安装包均由 GitHub Actions 自动构建并附在 [Releases](https://github.com/yuansir/seomachine/releases) 页。**无需安装任何服务器或后端。**
 
-1. 从 [Releases](https://github.com/YOUR_USERNAME/seomachine/releases) 下载最新 `.dmg`
+### macOS（Apple Silicon / Intel）
+
+| 文件 | 芯片 | 说明 |
+|------|------|------|
+| `SEO.Machine_0.1.0_aarch64.dmg` | Apple Silicon (M1/M2/M3) | 推荐 |
+| `SEO.Machine_0.1.0_x64.dmg` | Intel Mac | |
+
+1. 从 [Releases](https://github.com/yuansir/seomachine/releases) 下载对应架构的 `.dmg`
 2. 打开 `.dmg`，将 `SEO Machine.app` 拖入 `/Applications`
-3. 首次启动：右键点击 → 打开（绕过 Gatekeeper）
+3. **首次启动**：右键点击 App → **打开**（绕过 macOS Gatekeeper 安全提示）
 
-### Windows
+### Windows（x64）
 
-1. 从 [Releases](https://github.com/YOUR_USERNAME/seomachine/releases) 下载 `.msi` 安装包
-2. 运行安装向导
-3. 从开始菜单启动
+| 文件 | 说明 |
+|------|------|
+| `SEO.Machine_0.1.0_x64-setup.exe` | NSIS 安装包（推荐） |
+| `SEO.Machine_0.1.0_x64_en-US.msi` | MSI 安装包 |
+
+1. 从 [Releases](https://github.com/yuansir/seomachine/releases) 下载 `.exe` 安装包
+2. 运行安装向导，按提示完成安装
+3. 从开始菜单或桌面快捷方式启动
 
 ### 从源码构建
 
@@ -56,7 +68,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/YOUR_USERNAME/seomachine.git
+git clone https://github.com/yuansir/seomachine.git
 cd seomachine
 
 # 安装前端依赖

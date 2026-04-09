@@ -1,0 +1,5 @@
+# SEO Machine — Python Script Dependencies
+# Install with: pip install -r requirements.txt
+
+python-dotenv>=1.0.0
+requests>=2.31.0
