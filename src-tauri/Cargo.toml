@@ -1,8 +1,10 @@
 [package]
 name = "seomachine"
-version = "1.0.0"
-description = "SEO-optimized content creation tool"
-authors = ["you"]
+version = "0.1.0"
+description = "SEO-optimized content creation desktop application built with Tauri + React"
+authors = ["SEO Machine Contributors"]
+license = "MIT"
+repository = "https://github.com/YOUR_USERNAME/seomachine"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

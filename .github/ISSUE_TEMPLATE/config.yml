@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/YOUR_USERNAME/seomachine/blob/main/README.md
+    about: Read the README before filing an issue.

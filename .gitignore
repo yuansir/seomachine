@@ -1,0 +1,42 @@
+# ─── Node ───────────────────────────────────────────────────────
+node_modules/
+dist/
+.pnpm-store/
+*.tsbuildinfo
+
+# ─── Rust / Tauri ───────────────────────────────────────────────
+src-tauri/target/
+
+# ─── Environment & Secrets ──────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Database ───────────────────────────────────────────────────
+*.db
+*.sqlite
+*.db-shm
+*.db-wal
+
+# ─── Python ─────────────────────────────────────────────────────
+python-scripts/__pycache__/
+python-scripts/*.pyc
+python-scripts/*.pyo
+python-scripts/build/
+python-scripts/dist/
+python-scripts/*.egg-info/
+
+# ─── macOS ──────────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+*.swp
+
+# ─── IDE / Tools ────────────────────────────────────────────────
+.idea/
+.vscode/settings.json
+*.log
+
+# ─── AI Workflow (internal) ─────────────────────────────────────
+CLAUDE.md
+.planning/
+tasks/
