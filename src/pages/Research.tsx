@@ -51,12 +51,18 @@ export function ResearchPage() {
     setProgress(0);
     clearResults();
 
+    const researchPromise = runResearch(researchType, keywords, setProgress);
+    toast.promise(researchPromise, {
+      loading: "正在研究...",
+      success: "研究完成！",
+      error: (err) => `研究失败: ${err instanceof Error ? err.message : String(err)}`,
+    });
+
     try {
-      const result = await runResearch(researchType, keywords);
+      const result = await researchPromise;
       setResults(result);
-      toast.success("研究完成！");
-    } catch (error) {
-      toast.error(`研究失败: ${error}`);
+    } catch {
+      // error toast already shown by toast.promise
     } finally {
       setIsResearching(false);
     }
@@ -87,7 +93,9 @@ export function ResearchPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `research-${Date.now()}.json`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("导出成功");
   };

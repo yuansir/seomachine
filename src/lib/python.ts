@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { toast } from "sonner";
 import type { ResearchResult, ResearchType } from "@/stores/useResearchStore";
 
 interface ProgressPayload {
@@ -16,37 +15,24 @@ const RESEARCH_SCRIPTS: Record<ResearchType, string> = {
 
 export async function runResearch(
   type: ResearchType,
-  keywords: string[]
+  keywords: string[],
+  onProgress?: (progress: number) => void
 ): Promise<ResearchResult> {
   const script = RESEARCH_SCRIPTS[type];
   const args = keywords.flatMap((k) => ["--keywords", k]);
 
-  // Listen for progress events
+  // Listen for progress events from Python script
   const unlisten = await listen<ProgressPayload>("research-progress", (event) => {
-    console.log(`Progress: ${event.payload.progress}% - ${event.payload.message}`);
+    onProgress?.(event.payload.progress);
   });
 
   try {
-    // Use toast.promise for loading/success/error handling
-    const invokePromise = invoke<string>("run_python_script", {
+    const result = await invoke<string>("run_python_script", {
       script,
       args,
     });
 
-    const result = await toast.promise(
-      invokePromise,
-      {
-        loading: "正在研究...",
-        success: () => {
-          unlisten();
-          return "研究完成";
-        },
-        error: (err) => {
-          unlisten();
-          return `研究失败: ${err}`;
-        },
-      }
-    );
+    unlisten();
 
     // Parse the JSON output from Python script
     const resultStr = result as string;
@@ -63,7 +49,6 @@ export async function runResearch(
       rawOutput: resultStr,
     };
   } catch (error) {
-    // Error is already handled by toast.promise, but we need to re-throw for the store
     unlisten();
     throw error;
   }

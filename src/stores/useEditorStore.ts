@@ -20,6 +20,7 @@ interface EditorState {
   error: string | null;
 
   loadArticle: (article: Article) => void;
+  updateTitle: (title: string) => void;
   updateContent: (content: string) => void;
   saveArticle: () => Promise<void>;
   undo: () => void;
@@ -50,6 +51,12 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     });
   },
 
+  updateTitle: (title) => {
+    const { currentArticle } = get();
+    if (!currentArticle) return;
+    set({ currentArticle: { ...currentArticle, title }, isDirty: true });
+  },
+
   updateContent: (content) => {
     const { history, historyIndex } = get();
 
@@ -75,7 +82,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (!currentArticle) return;
 
     const updatedAt = new Date().toISOString();
-    await saveArticleToDB({
+    const persistedId = await saveArticleToDB({
       id: currentArticle.id,
       title: currentArticle.title,
       content,
@@ -83,7 +90,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     });
 
     set({
-      currentArticle: { ...currentArticle, content, updatedAt },
+      currentArticle: { ...currentArticle, id: persistedId, content, updatedAt },
       isDirty: false,
     });
   },

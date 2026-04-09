@@ -41,18 +41,21 @@ export const useLLMProviderStore = create<LLMProviderState>()((set, get) => ({
   isLoading: true,
 
   setProvider: (provider) => {
-    const newState = { provider };
+    const updates: Partial<LLMProviderState> = { provider };
     if (provider === 'deepseek') {
-      Object.assign(newState, {
-        baseURL: 'https://api.deepseek.com',
-        model: 'deepseek-chat',
-      });
+      updates.baseURL = 'https://api.deepseek.com';
+      updates.model = 'deepseek-chat';
     }
-    set(newState);
-    // Persist provider choice
-    getStore().then((s) => {
-      s.set('llmProvider', provider).then(() => s.save());
-    });
+    set(updates);
+    // Persist provider, baseURL, and model changes
+    getStore()
+      .then(async (s) => {
+        await s.set('llmProvider', provider);
+        if (updates.baseURL) await s.set('llmBaseURL', updates.baseURL);
+        if (updates.model) await s.set('llmModel', updates.model);
+        await s.save();
+      })
+      .catch(() => { /* silent — in-memory update already applied */ });
   },
 
   setApiKey: async (apiKey) => {

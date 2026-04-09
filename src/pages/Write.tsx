@@ -42,6 +42,13 @@ export function WritePage() {
       .catch(() => {/* DB not available in dev mode */});
   }, []);
 
+  // Abort streaming on unmount to prevent updates to unmounted component
+  useEffect(() => {
+    return () => {
+      abortController?.abort();
+    };
+  }, [abortController]);
+
   const handleSelectBrief = (briefId: string) => {
     const dbBrief = savedBriefs.find((b) => b.id === briefId);
     if (!dbBrief) return;
@@ -93,7 +100,7 @@ export function WritePage() {
       if (error instanceof Error && error.name === "AbortError") {
         toast.info("生成已取消");
       } else {
-        toast.error(`生成失败: ${error}`);
+        toast.error(`生成失败: ${error instanceof Error ? error.message : String(error)}`);
       }
     } finally {
       setIsGenerating(false);
@@ -133,9 +140,8 @@ SEO评分：${brief.seoScore}/100
     try {
       const article = await saveArticle();
       if (article) {
-        toast.success("文章已保存，正在跳转到编辑器...");
-        // Navigate to editor with the saved article id
-        setTimeout(() => navigate("editor", { articleId: article.id }), 800);
+        toast.success("文章已保存！");
+        navigate("editor", { articleId: article.id });
       }
     } catch (error) {
       toast.error(`保存失败: ${error}`);

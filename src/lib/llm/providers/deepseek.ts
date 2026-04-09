@@ -24,7 +24,7 @@ export function createDeepSeekProvider(config: LLMConfig): LLMProvider {
       }, { signal: options.signal });
 
       let fullContent = '';
-      const ESTIMATED_CHARS = 2000;
+      const ESTIMATED_CHARS = 6000;
 
       for await (const chunk of stream) {
         if (options.signal?.aborted) break;

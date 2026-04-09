@@ -53,7 +53,8 @@ fn get_credentials(app: &tauri::AppHandle) -> Result<WordPressCredentials, Strin
 pub async fn check_wordpress_status(app: tauri::AppHandle) -> Result<bool, String> {
     match get_credentials(&app) {
         Ok(creds) => {
-            let url = format!("{}/wp-json/wp/v2/users/me", creds.site_url);
+            let site_url = creds.site_url.trim_end_matches('/');
+            let url = format!("{}/wp-json/wp/v2/users/me", site_url);
             let client = reqwest::Client::new();
 
             match client
@@ -77,9 +78,16 @@ pub async fn publish_to_wordpress(
     content: String,
     status: String,
 ) -> Result<PublishResult, String> {
-    let creds = get_credentials(&app)?;
+    // Validate status to prevent injection of arbitrary values
+    let allowed_statuses = ["publish", "draft", "pending", "private"];
+    if !allowed_statuses.contains(&status.as_str()) {
+        return Err(format!("Invalid status '{}'. Must be one of: publish, draft, pending, private", status));
+    }
 
-    let url = format!("{}/wp-json/wp/v2/posts", creds.site_url);
+    let creds = get_credentials(&app)?;
+    let site_url = creds.site_url.trim_end_matches('/');
+
+    let url = format!("{}/wp-json/wp/v2/posts", site_url);
     let client = reqwest::Client::new();
 
     let body = serde_json::json!({
@@ -126,8 +134,9 @@ pub async fn get_wordpress_posts(
 ) -> Result<Vec<serde_json::Value>, String> {
     let creds = get_credentials(&app)?;
     let per_page = per_page.unwrap_or(10);
+    let site_url = creds.site_url.trim_end_matches('/');
 
-    let url = format!("{}/wp-json/wp/v2/posts?per_page={}", creds.site_url, per_page);
+    let url = format!("{}/wp-json/wp/v2/posts?per_page={}", site_url, per_page);
     let client = reqwest::Client::new();
 
     let response = client

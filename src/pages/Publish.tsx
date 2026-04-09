@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useEditorStore, type Article } from "@/stores/useEditorStore";
 import { listArticlesFromDB, markArticlePublished } from "@/lib/db";
+import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 
 interface PublishResult {
@@ -57,12 +58,8 @@ export function PublishPage() {
   }, [loadArticles]);
 
   const checkWordPressStatus = async () => {
-    if (!window.__TAURI__) {
-      setWpStatus(false);
-      return;
-    }
     try {
-      const status = await window.__TAURI__.core.invoke<boolean>("check_wordpress_status");
+      const status = await invoke<boolean>("check_wordpress_status");
       setWpStatus(status);
     } catch {
       setWpStatus(false);
@@ -81,16 +78,12 @@ export function PublishPage() {
       toast.error("请先选择要发布的文章");
       return;
     }
-    if (!window.__TAURI__) {
-      toast.error("Tauri 未初始化");
-      return;
-    }
 
     setIsPublishing(true);
     setPublishResult(null);
 
     try {
-      const result = await window.__TAURI__.core.invoke<PublishResult>("publish_to_wordpress", {
+      const result = await invoke<PublishResult>("publish_to_wordpress", {
         title: article.title,
         content: article.content,
         status,

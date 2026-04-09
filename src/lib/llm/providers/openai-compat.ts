@@ -3,6 +3,9 @@ import type { LLMConfig, GenerationOptions, LLMMessage, LLMProvider } from '../t
 
 export function createOpenAICompatProvider(config: LLMConfig): LLMProvider {
   // For OpenAI-compatible, baseURL must be provided
+  if (!config.baseURL) {
+    throw new Error("OpenAI 兼容模式需要配置 Base URL，请在设置中填写 API Base URL");
+  }
   const baseURL = config.baseURL.endsWith('/v1')
     ? config.baseURL
     : `${config.baseURL}/v1`;
@@ -29,7 +32,7 @@ export function createOpenAICompatProvider(config: LLMConfig): LLMProvider {
       }, { signal: options.signal });
 
       let fullContent = '';
-      const ESTIMATED_CHARS = 2000;
+      const ESTIMATED_CHARS = 6000;
 
       for await (const chunk of stream) {
         if (options.signal?.aborted) break;

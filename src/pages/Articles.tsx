@@ -59,12 +59,13 @@ export function ArticlesPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm("确认删除此文章？此操作不可撤销。")) return;
     try {
       await deleteArticleFromDB(id);
       setArticles((prev) => prev.filter((a) => a.id !== id));
       toast.success("文章已删除");
     } catch (error) {
-      toast.error(`删除失败: ${error}`);
+      toast.error(`删除失败: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 

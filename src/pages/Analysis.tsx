@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Play, AlertCircle, CheckCircle, AlertTriangle, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -6,16 +6,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAnalysisStore, type AnalysisType, type AnalysisResults } from "@/stores/useAnalysisStore";
 import { useEditorStore, type Article } from "@/stores/useEditorStore";
+import { listArticlesFromDB } from "@/lib/db";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { EmptyAnalysis } from "@/components/features/EmptyState";
 import { ProgressBar } from "@/components/features/ProgressBar";
-
-// Mock articles for demo
-const mockArticles: Article[] = [
-  { id: "1", title: "SEO 最佳实践指南", content: "# SEO 最佳实践...\n\n这是一篇关于 SEO 的文章...", status: "draft", createdAt: "2024-01-15", updatedAt: "2024-01-15" },
-  { id: "2", title: "内容营销完整教程", content: "# 内容营销...\n\n内容营销是...", status: "published", createdAt: "2024-01-10", updatedAt: "2024-01-12" },
-];
 
 function ScoreGauge({ score, size = 120 }: { score: number; size?: number }) {
   const radius = (size - 16) / 2;
@@ -89,6 +84,30 @@ export function AnalysisPage() {
 
   const { currentArticle } = useEditorStore();
   const [selectedArticle, setSelectedArticleLocal] = useState<Article | null>(null);
+  const [dbArticles, setDbArticles] = useState<Article[]>([]);
+
+  const loadDbArticles = useCallback(async () => {
+    try {
+      const rows = await listArticlesFromDB();
+      setDbArticles(
+        rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          content: r.content,
+          briefId: r.briefId,
+          status: r.status,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        }))
+      );
+    } catch {
+      // DB may not be available in dev mode
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDbArticles();
+  }, [loadDbArticles]);
 
   const handleStartAnalysis = async () => {
     const article = selectedArticle || currentArticle;
@@ -98,12 +117,16 @@ export function AnalysisPage() {
     }
 
     await runAnalysis(article.content);
-    toast.success("分析完成！");
+    if (useAnalysisStore.getState().error) {
+      toast.error(`分析失败: ${useAnalysisStore.getState().error}`);
+    } else {
+      toast.success("分析完成！");
+    }
   };
 
   const handleSelectArticle = (id: string) => {
-    const article = mockArticles.find((a) => a.id === id);
-    setSelectedArticleLocal(article || null);
+    const article = dbArticles.find((a) => a.id === id) || (currentArticle?.id === id ? currentArticle : null);
+    setSelectedArticleLocal(article ?? null);
     setSelectedArticle(id);
   };
 
@@ -127,11 +150,23 @@ export function AnalysisPage() {
                   <SelectValue placeholder="选择文章..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockArticles.map((article) => (
-                    <SelectItem key={article.id} value={article.id}>
-                      {article.title}
+                  {currentArticle && (
+                    <SelectItem key={currentArticle.id} value={currentArticle.id}>
+                      {currentArticle.title} (当前)
                     </SelectItem>
-                  ))}
+                  )}
+                  {dbArticles
+                    .filter((a) => a.id !== currentArticle?.id)
+                    .map((article) => (
+                      <SelectItem key={article.id} value={article.id}>
+                        {article.title}
+                      </SelectItem>
+                    ))}
+                  {dbArticles.length === 0 && !currentArticle && (
+                    <SelectItem value="_none" disabled>
+                      暂无文章
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
 
@@ -150,7 +185,7 @@ export function AnalysisPage() {
             </CardHeader>
             <CardContent>
               <Tabs value={analysisType} onValueChange={(v) => setAnalysisType(v as AnalysisType)}>
-                <TabsList className="w-full grid grid-cols-2">
+                <TabsList className="w-full grid grid-cols-4">
                   <TabsTrigger value="keyword">关键词</TabsTrigger>
                   <TabsTrigger value="readability">可读性</TabsTrigger>
                   <TabsTrigger value="seo">SEO 质量</TabsTrigger>

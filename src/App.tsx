@@ -47,9 +47,9 @@ function App() {
     <GlobalErrorBoundary>
       <AppShell onOpenSettings={handleOpenSettings}>
         <div className="p-6">
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
             {pageTitles[currentPage]}
-          </h1>
+          </p>
           <p className="text-slate-500 dark:text-slate-400 mt-2">
             {pageDescriptions[currentPage]}
           </p>

@@ -84,9 +84,11 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
       setDataforseoKeyInput(dataforseoApiKey || "");
       setWpUrlInput(wordpressUrl || "");
       setWpUsernameInput(wordpressUsername || "");
-      setWpPasswordInput(wordpressAppPassword || "");
+      // Do NOT pre-populate password in the form — leave blank to avoid showing secrets
+      // The placeholder text indicates whether a value is already saved
+      setWpPasswordInput("");
     }
-  }, [isLoading, dataforseoApiKey, wordpressUrl, wordpressUsername, wordpressAppPassword]);
+  }, [isLoading, dataforseoApiKey, wordpressUrl, wordpressUsername]);
 
   useEffect(() => {
     setLlmProvider(currentProvider);
@@ -115,13 +117,19 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
   };
 
   const handleSaveWordPress = async () => {
-    if (!wpUrlInput.trim() || !wpUsernameInput.trim() || !wpPasswordInput.trim()) {
+    if (!wpUrlInput.trim() || !wpUsernameInput.trim()) {
       toast.error("请填写完整的 WordPress 配置信息");
+      return;
+    }
+    // If password field is empty, keep the previously saved password
+    const passwordToSave = wpPasswordInput.trim() || wordpressAppPassword || "";
+    if (!passwordToSave) {
+      toast.error("请填写 WordPress 应用程序密码");
       return;
     }
     setIsSavingWp(true);
     try {
-      await setWordPress(wpUrlInput.trim(), wpUsernameInput.trim(), wpPasswordInput.trim());
+      await setWordPress(wpUrlInput.trim(), wpUsernameInput.trim(), passwordToSave);
       toast.success("WordPress 配置已保存");
     } catch {
       toast.error("保存失败");
@@ -132,19 +140,14 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
 
   const handleTestConnection = async () => {
     setIsTestingWp(true);
-    try {
-      toast.promise(
-        invoke<boolean>("test_wordpress_connection").finally(() => setIsTestingWp(false)),
-        {
-          loading: "正在测试连接...",
-          success: "连接成功",
-          error: (err) => `连接失败: ${err}`,
-        }
-      );
-    } catch {
-      toast.error("连接失败");
-      setIsTestingWp(false);
-    }
+    toast.promise(
+      invoke<boolean>("test_wordpress_connection").finally(() => setIsTestingWp(false)),
+      {
+        loading: "正在测试连接...",
+        success: "连接成功",
+        error: (err) => `连接失败: ${err}`,
+      }
+    );
   };
 
   const handleThemeToggle = (checked: boolean) => {
@@ -157,8 +160,8 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
       return;
     }
     setIsSavingLlm(true);
-    try {
-      await setLlmApiKey(llmKeyInput.trim());
+    try {      // Persist provider selection first
+      useLLMProviderStore.getState().setProvider(llmProvider);      await setLlmApiKey(llmKeyInput.trim());
       if (llmProvider === 'openai-compat' && llmBaseUrlInput.trim()) {
         await setLlmBaseUrl(llmBaseUrlInput.trim());
       }
@@ -448,7 +451,7 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
                       type="password"
                       value={wpPasswordInput}
                       onChange={(e) => setWpPasswordInput(e.target.value)}
-                      placeholder="xxxx xxxx xxxx xxxx"
+                      placeholder={wordpressAppPassword ? "••••••••  已保存（留空保持不变）" : "xxxx xxxx xxxx xxxx"}
                       className="mt-1"
                     />
                   </div>

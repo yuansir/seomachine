@@ -18,6 +18,7 @@ export function EditorPage() {
     history,
     historyIndex,
     loadArticle,
+    updateTitle,
     updateContent,
     saveArticle,
     undo,
@@ -92,7 +93,9 @@ export function EditorPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `${currentArticle?.title || "article"}.md`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("导出成功");
   };
@@ -127,7 +130,7 @@ export function EditorPage() {
             value={currentArticle?.title ?? ""}
             onChange={(e) => {
               if (currentArticle) {
-                loadArticle({ ...currentArticle, title: e.target.value });
+                updateTitle(e.target.value);
               }
             }}
             placeholder="文章标题..."
