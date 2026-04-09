@@ -12,6 +12,8 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             commands::python::run_python_script,
+            commands::python::check_python_env,
+            commands::python::setup_python_env,
             commands::keys::store_api_key,
             commands::keys::get_api_key,
             commands::keys::delete_api_key,

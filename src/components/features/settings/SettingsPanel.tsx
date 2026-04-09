@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useLLMProviderStore } from "@/stores/useLLMProviderStore";
 import type { ProviderType } from "@/lib/llm/types";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { toast } from "sonner";
 
 interface SettingsPanelProps {
@@ -31,6 +32,18 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
   const [isSavingLlm, setIsSavingLlm] = useState(false);
   const [isSavingLlmParams, setIsSavingLlmParams] = useState(false);
   const [isTestingWp, setIsTestingWp] = useState(false);
+
+  // Python env state
+  const [isCheckingPython, setIsCheckingPython] = useState(false);
+  const [isSettingUpPython, setIsSettingUpPython] = useState(false);
+  const [setupProgress, setSetupProgress] = useState(0);
+  const [setupMessage, setSetupMessage] = useState("");
+  const [pythonStatus, setPythonStatus] = useState<{
+    ready: boolean;
+    source: string;
+    python_version?: string;
+    message: string;
+  } | null>(null);
 
   // API Keys state
   const [dataforseoKeyInput, setDataforseoKeyInput] = useState("");
@@ -57,6 +70,14 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
       loadLlmConfig();
     }
   }, [open, loadSettings, loadLlmConfig]);
+
+  // Auto-check Python env when the env tab is opened
+  useEffect(() => {
+    if (activeTab === "env" && pythonStatus === null && !isCheckingPython) {
+      handleCheckPython();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -163,6 +184,47 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
     }
   };
 
+  const handleCheckPython = async () => {
+    setIsCheckingPython(true);
+    try {
+      const status = await invoke<typeof pythonStatus>("check_python_env");
+      setPythonStatus(status);
+    } catch (e) {
+      toast.error(`检查失败: ${e}`);
+    } finally {
+      setIsCheckingPython(false);
+    }
+  };
+
+  const handleSetupPython = async () => {
+    setIsSettingUpPython(true);
+    setSetupProgress(0);
+    setSetupMessage("准备中...");
+
+    const unlisten = await listen<{ progress: number; message: string }>(
+      "python-setup-progress",
+      (event) => {
+        setSetupProgress(event.payload.progress);
+        setSetupMessage(event.payload.message);
+      }
+    );
+
+    try {
+      const msg = await invoke<string>("setup_python_env");
+      toast.success(msg);
+      // Re-check status after setup
+      const status = await invoke<typeof pythonStatus>("check_python_env");
+      setPythonStatus(status);
+    } catch (e) {
+      toast.error(`初始化失败: ${e}`);
+    } finally {
+      unlisten();
+      setIsSettingUpPython(false);
+      setSetupProgress(0);
+      setSetupMessage("");
+    }
+  };
+
   const handleLlmProviderChange = (v: string | null) => {
     if (!v) return;
     const provider = v as ProviderType;
@@ -198,6 +260,7 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
               <TabsTrigger value="api-keys" className="flex-1">API 密钥</TabsTrigger>
               <TabsTrigger value="llm" className="flex-1">LLM</TabsTrigger>
               <TabsTrigger value="wordpress" className="flex-1">WordPress</TabsTrigger>
+              <TabsTrigger value="env" className="flex-1">环境</TabsTrigger>
               <TabsTrigger value="appearance" className="flex-1">外观</TabsTrigger>
             </TabsList>
 
@@ -397,6 +460,84 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
                     <Button variant="outline" onClick={handleTestConnection} className="flex-1" disabled={isTestingWp}>
                       {isTestingWp ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />测试中...</> : "测试连接"}
                     </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="env" className="mt-4 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Python 运行环境</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-xs text-slate-500">
+                    SEO 研究功能需要独立的 Python 环境。初始化后会在应用数据目录创建隔离 venv，与系统 Python 完全隔离，互不影响。
+                  </p>
+
+                  {/* Status display */}
+                  {pythonStatus && (
+                    <div className={`flex items-start gap-2 p-3 rounded-md text-sm ${
+                      pythonStatus.ready
+                        ? "bg-green-50 text-green-800 dark:bg-green-950 dark:text-green-200"
+                        : "bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                    }`}>
+                      {pythonStatus.ready
+                        ? <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+                        : <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />}
+                      <div>
+                        <p className="font-medium">{pythonStatus.message}</p>
+                        {pythonStatus.source === "venv" && (
+                          <p className="text-xs mt-0.5 opacity-75">隔离 venv · 与系统 Python 无关</p>
+                        )}
+                        {pythonStatus.source === "system" && (
+                          <p className="text-xs mt-0.5 opacity-75">使用系统 Python（建议点击「初始化环境」创建隔离环境）</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Setup progress */}
+                  {isSettingUpPython && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>{setupMessage}</span>
+                        <span>{setupProgress}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+                        <div
+                          className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                          style={{ width: `${setupProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleCheckPython}
+                      disabled={isCheckingPython || isSettingUpPython}
+                      className="flex-1"
+                    >
+                      {isCheckingPython ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />检查中...</> : "检查状态"}
+                    </Button>
+                    <Button
+                      onClick={handleSetupPython}
+                      disabled={isSettingUpPython || isCheckingPython}
+                      className="flex-1"
+                    >
+                      {isSettingUpPython
+                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{setupProgress > 0 ? `${setupProgress}%` : "初始化中..."}</>
+                        : (pythonStatus?.ready ? "重新初始化" : "初始化环境")}
+                    </Button>
+                  </div>
+
+                  <div className="text-xs text-slate-400 space-y-1 pt-1 border-t">
+                    <p>• 首次使用研究功能前请先点击「初始化环境」</p>
+                    <p>• 需要系统已安装 Python 3.10+（仅用于创建隔离 venv）</p>
+                    <p>• 安装过程需要网络连接（约 10–30 秒）</p>
+                    <p>• 隔离环境存储在应用数据目录，卸载 App 时一并清除</p>
                   </div>
                 </CardContent>
               </Card>
