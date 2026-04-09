@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -25,6 +25,13 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
 
   const [activeTab, setActiveTab] = useState("api-keys");
 
+  // Per-section saving state
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+  const [isSavingWp, setIsSavingWp] = useState(false);
+  const [isSavingLlm, setIsSavingLlm] = useState(false);
+  const [isSavingLlmParams, setIsSavingLlmParams] = useState(false);
+  const [isTestingWp, setIsTestingWp] = useState(false);
+
   // API Keys state
   const [dataforseoKeyInput, setDataforseoKeyInput] = useState("");
 
@@ -42,7 +49,7 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
   const [llmTempInput, setLlmTempInput] = useState(0.7);
   const [llmMaxTokensInput, setLlmMaxTokensInput] = useState(4096);
 
-  const { loadConfig: loadLlmConfig, setApiKey: setLlmApiKey, setBaseURL: setLlmBaseUrl, setModel: setLlmModel, setTemperature: setLlmTemperature, setMaxTokens: setLlmMaxTokens, provider: currentProvider } = useLLMProviderStore();
+  const { loadConfig: loadLlmConfig, setApiKey: setLlmApiKey, setBaseURL: setLlmBaseUrl, setModel: setLlmModel, setTemperature: setLlmTemperature, setMaxTokens: setLlmMaxTokens, provider: currentProvider, apiKey: storedLlmApiKey, baseURL: storedBaseUrl, model: storedModel, temperature: storedTemperature, maxTokens: storedMaxTokens } = useLLMProviderStore();
 
   useEffect(() => {
     if (open) {
@@ -62,50 +69,60 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
 
   useEffect(() => {
     setLlmProvider(currentProvider);
-  }, [currentProvider]);
+    // Populate form inputs from persisted store values when panel opens or config loads
+    setLlmKeyInput(storedLlmApiKey || '');
+    setLlmBaseUrlInput(storedBaseUrl || '');
+    setLlmModelInput(storedModel || (currentProvider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o-mini'));
+    setLlmTempInput(storedTemperature ?? 0.7);
+    setLlmMaxTokensInput(storedMaxTokens ?? 4096);
+  }, [currentProvider, storedLlmApiKey, storedBaseUrl, storedModel, storedTemperature, storedMaxTokens]);
 
   const handleSaveApiKeys = async () => {
+    if (!dataforseoKeyInput.trim()) {
+      toast.error("请填写 DataForSEO API 密钥");
+      return;
+    }
+    setIsSavingApiKey(true);
     try {
-      if (!dataforseoKeyInput.trim()) {
-        toast.error("请填写 DataForSEO API 密钥");
-        return;
-      }
       await setApiKey("dataforseo", dataforseoKeyInput.trim());
       toast.success("API 密钥已保存");
     } catch {
       toast.error("保存失败");
+    } finally {
+      setIsSavingApiKey(false);
     }
   };
 
   const handleSaveWordPress = async () => {
+    if (!wpUrlInput.trim() || !wpUsernameInput.trim() || !wpPasswordInput.trim()) {
+      toast.error("请填写完整的 WordPress 配置信息");
+      return;
+    }
+    setIsSavingWp(true);
     try {
-      if (!wpUrlInput.trim() || !wpUsernameInput.trim() || !wpPasswordInput.trim()) {
-        toast.error("请填写完整的 WordPress 配置信息");
-        return;
-      }
       await setWordPress(wpUrlInput.trim(), wpUsernameInput.trim(), wpPasswordInput.trim());
       toast.success("WordPress 配置已保存");
-    } catch (error) {
+    } catch {
       toast.error("保存失败");
+    } finally {
+      setIsSavingWp(false);
     }
   };
 
   const handleTestConnection = async () => {
+    setIsTestingWp(true);
     try {
       toast.promise(
-        invoke<boolean>("test_wordpress_connection"),
+        invoke<boolean>("test_wordpress_connection").finally(() => setIsTestingWp(false)),
         {
           loading: "正在测试连接...",
-          success: () => {
-            return "连接成功";
-          },
-          error: (err) => {
-            return `连接失败: ${err}`;
-          }
+          success: "连接成功",
+          error: (err) => `连接失败: ${err}`,
         }
       );
-    } catch (error) {
+    } catch {
       toast.error("连接失败");
+      setIsTestingWp(false);
     }
   };
 
@@ -118,18 +135,32 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
       toast.error('请输入 API 密钥');
       return;
     }
-    await setLlmApiKey(llmKeyInput.trim());
-    if (llmProvider === 'openai-compat' && llmBaseUrlInput.trim()) {
-      await setLlmBaseUrl(llmBaseUrlInput.trim());
+    setIsSavingLlm(true);
+    try {
+      await setLlmApiKey(llmKeyInput.trim());
+      if (llmProvider === 'openai-compat' && llmBaseUrlInput.trim()) {
+        await setLlmBaseUrl(llmBaseUrlInput.trim());
+      }
+      toast.success('LLM 配置已保存');
+    } catch {
+      toast.error('保存失败');
+    } finally {
+      setIsSavingLlm(false);
     }
-    toast.success('LLM 配置已保存');
   };
 
   const handleSaveLlmParams = async () => {
-    await setLlmModel(llmModelInput);
-    await setLlmTemperature(llmTempInput);
-    await setLlmMaxTokens(llmMaxTokensInput);
-    toast.success('模型参数已保存');
+    setIsSavingLlmParams(true);
+    try {
+      await setLlmModel(llmModelInput);
+      await setLlmTemperature(llmTempInput);
+      await setLlmMaxTokens(llmMaxTokensInput);
+      toast.success('模型参数已保存');
+    } catch {
+      toast.error('保存失败');
+    } finally {
+      setIsSavingLlmParams(false);
+    }
   };
 
   const handleLlmProviderChange = (v: string | null) => {
@@ -188,8 +219,8 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
                     />
                   </div>
 
-                  <Button onClick={handleSaveApiKeys} className="w-full">
-                    保存
+                  <Button onClick={handleSaveApiKeys} className="w-full" disabled={isSavingApiKey}>
+                    {isSavingApiKey ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />保存中...</> : "保存"}
                   </Button>
                 </CardContent>
               </Card>
@@ -255,8 +286,8 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
                     </div>
                   )}
 
-                  <Button onClick={handleSaveLlmConfig} className="w-full">
-                    保存配置
+                  <Button onClick={handleSaveLlmConfig} className="w-full" disabled={isSavingLlm}>
+                    {isSavingLlm ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />保存中...</> : "保存配置"}
                   </Button>
                 </CardContent>
               </Card>
@@ -314,8 +345,8 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
                     </p>
                   </div>
 
-                  <Button onClick={handleSaveLlmParams} variant="outline" className="w-full">
-                    保存参数
+                  <Button onClick={handleSaveLlmParams} variant="outline" className="w-full" disabled={isSavingLlmParams}>
+                    {isSavingLlmParams ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />保存中...</> : "保存参数"}
                   </Button>
                 </CardContent>
               </Card>
@@ -360,11 +391,11 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button onClick={handleSaveWordPress} className="flex-1">
-                      保存
+                    <Button onClick={handleSaveWordPress} className="flex-1" disabled={isSavingWp}>
+                      {isSavingWp ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />保存中...</> : "保存"}
                     </Button>
-                    <Button variant="outline" onClick={handleTestConnection} className="flex-1">
-                      测试连接
+                    <Button variant="outline" onClick={handleTestConnection} className="flex-1" disabled={isTestingWp}>
+                      {isTestingWp ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />测试中...</> : "测试连接"}
                     </Button>
                   </div>
                 </CardContent>

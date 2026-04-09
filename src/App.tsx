@@ -3,6 +3,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { AppShell } from "@/components/layout";
 import { SettingsPanel } from "@/components/features/settings/SettingsPanel";
 import { Card } from "@/components/ui/card";
+import { Toaster } from "@/components/ui/sonner";
 import { ResearchPage } from "@/pages/Research";
 import { WritePage } from "@/pages/Write";
 import { EditorPage } from "@/pages/Editor";
@@ -99,6 +100,7 @@ function App() {
       </AppShell>
 
       <SettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <Toaster richColors position="top-right" />
     </GlobalErrorBoundary>
   );
 }
