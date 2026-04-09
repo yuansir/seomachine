@@ -2,16 +2,6 @@ use serde::{Deserialize, Serialize};
 use tauri_plugin_store::StoreExt;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ApiKeyType {
-    #[serde(rename = "claude")]
-    Claude,
-    #[serde(rename = "dataforseo")]
-    DataForSeo,
-    #[serde(rename = "wordpress")]
-    WordPress,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WordPressConfig {
     pub site_url: String,
     pub username: String,

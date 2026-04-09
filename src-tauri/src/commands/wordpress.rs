@@ -9,17 +9,6 @@ pub struct WordPressCredentials {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WordPressPost {
-    pub id: Option<u32>,
-    pub title: String,
-    pub content: String,
-    pub status: String,
-    pub slug: Option<String>,
-    pub categories: Vec<u32>,
-    pub tags: Vec<u32>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublishResult {
     pub success: bool,
     pub post_id: Option<u32>,
