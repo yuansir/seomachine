@@ -1,4 +1,5 @@
 use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_store::StoreExt;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -66,6 +67,8 @@ pub async fn run_python_script(
         .args(&args)
         // Set working directory to script dir so relative imports work
         .current_dir(resource_path.join("python-scripts"))
+        // Pass API credentials as environment variables
+        .envs(collect_env_vars(&app))
         .output();
 
     let output = match tokio::time::timeout(timeout_duration, cmd_future).await {
@@ -328,6 +331,28 @@ fn parse_python_error(stderr: &str, script: &str) -> String {
         return format!("脚本执行失败（{}），请稍后重试", script);
     }
     last_line.to_string()
+}
+
+/// Collect API credentials from the Tauri store and return as env var pairs.
+/// These are passed to Python scripts so they can call external APIs.
+fn collect_env_vars(app: &AppHandle) -> Vec<(String, String)> {
+    let mut vars: Vec<(String, String)> = Vec::new();
+
+    // Try to read from settings.json store (fire-and-forget; if unavailable just skip)
+    if let Ok(store) = app.store("settings.json") {
+        if let Some(key) = store.get("dataforseoApiKey").and_then(|v| v.as_str().map(String::from)) {
+            // Key may be stored as "login:password" or just the password with login separate
+            if key.contains(':') {
+                let parts: Vec<&str> = key.splitn(2, ':').collect();
+                vars.push(("DATAFORSEO_LOGIN".into(), parts[0].to_string()));
+                vars.push(("DATAFORSEO_PASSWORD".into(), parts[1].to_string()));
+            } else {
+                vars.push(("DATAFORSEO_API_KEY".into(), key));
+            }
+        }
+    }
+
+    vars
 }
 
 /// Utility: return the path of the isolated venv (for display in settings)
