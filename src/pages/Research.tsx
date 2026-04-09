@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useResearchStore, type ResearchType } from "@/stores/useResearchStore";
 import { runResearch } from "@/lib/python";
+import { saveResearchToDB } from "@/lib/db";
 import { toast } from "sonner";
 import { EmptyResearch } from "@/components/features/EmptyState";
 import { ProgressBar } from "@/components/features/ProgressBar";
@@ -27,6 +28,7 @@ export function ResearchPage() {
   } = useResearchStore();
 
   const [keywordInput, setKeywordInput] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleAddKeyword = () => {
     if (keywordInput.trim() && !keywords.includes(keywordInput.trim())) {
@@ -60,10 +62,22 @@ export function ResearchPage() {
     }
   };
 
-  const handleSaveResults = () => {
+  const handleSaveResults = async () => {
     if (!results) return;
-    // TODO: Save to database via Rust command
-    toast.success("研究简报已保存");
+    setIsSaving(true);
+    try {
+      const topic = results.keywords[0]?.keyword ?? keywords[0] ?? "unknown";
+      await saveResearchToDB({
+        topic,
+        type: results.type,
+        content: JSON.stringify(results),
+      });
+      toast.success("研究简报已保存到数据库");
+    } catch (error) {
+      toast.error(`保存失败: ${error}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleExportResults = () => {
@@ -180,9 +194,14 @@ export function ResearchPage() {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>研究结果</CardTitle>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleSaveResults}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSaveResults}
+                      disabled={isSaving}
+                    >
                       <Save className="h-4 w-4 mr-1" />
-                      保存
+                      {isSaving ? "保存中..." : "保存"}
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleExportResults}>
                       <Download className="h-4 w-4 mr-1" />

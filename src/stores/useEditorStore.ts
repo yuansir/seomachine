@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { saveArticleToDB } from "@/lib/db";
 
 export interface Article {
   id: string;
@@ -73,15 +74,18 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     const { currentArticle, content } = get();
     if (!currentArticle) return;
 
-    // TODO: Save to database via Rust command
-    const updated = {
-      ...currentArticle,
+    const updatedAt = new Date().toISOString();
+    await saveArticleToDB({
+      id: currentArticle.id,
+      title: currentArticle.title,
       content,
-      updatedAt: new Date().toISOString(),
-    };
+      status: currentArticle.status,
+    });
 
-    console.log("Article saved:", updated);
-    set({ currentArticle: updated, isDirty: false });
+    set({
+      currentArticle: { ...currentArticle, content, updatedAt },
+      isDirty: false,
+    });
   },
 
   undo: () => {

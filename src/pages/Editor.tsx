@@ -1,17 +1,16 @@
 import { useState, useEffect } from "react";
-import { Save, Download, Copy, Undo, Redo, Bold, Italic, List, FileText } from "lucide-react";
+import { Save, Download, Copy, Undo, Redo, Bold, Italic, List, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { useEditorStore, type Article } from "@/stores/useEditorStore";
+import { useEditorStore } from "@/stores/useEditorStore";
+import { useNavigationStore } from "@/stores/useNavigationStore";
+import { useWriteStore } from "@/stores/useWriteStore";
+import { getArticleFromDB } from "@/lib/db";
 import { toast } from "sonner";
 
-interface EditorPageProps {
-  articleId?: string;
-}
-
-export function EditorPage({ articleId }: EditorPageProps) {
+export function EditorPage() {
   const {
     currentArticle,
     content,
@@ -25,24 +24,50 @@ export function EditorPage({ articleId }: EditorPageProps) {
     redo,
   } = useEditorStore();
 
+  const { editorArticleId } = useNavigationStore();
+  const { generatedContent } = useWriteStore();
+
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load article if ID provided
+  // Load article from DB when navigated with an ID
   useEffect(() => {
-    if (articleId) {
-      // TODO: Load from database
-      const mockArticle: Article = {
-        id: articleId,
-        title: "Sample Article",
-        content: "# Sample Article\n\nStart writing your content here...",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: "draft",
-      };
-      loadArticle(mockArticle);
+    if (!editorArticleId) {
+      // If no DB id but we have just-generated content, load it into the editor
+      if (generatedContent && !currentArticle) {
+        loadArticle({
+          id: crypto.randomUUID(),
+          title: "未命名文章",
+          content: generatedContent,
+          status: "draft",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      return;
     }
-  }, [articleId, loadArticle]);
+
+    setIsLoading(true);
+    getArticleFromDB(editorArticleId)
+      .then((article) => {
+        if (article) {
+          loadArticle({
+            id: article.id,
+            title: article.title,
+            content: article.content,
+            briefId: article.briefId,
+            status: article.status,
+            createdAt: article.createdAt,
+            updatedAt: article.updatedAt,
+          });
+        } else {
+          toast.error("文章不存在");
+        }
+      })
+      .catch(() => toast.error("加载文章失败"))
+      .finally(() => setIsLoading(false));
+  }, [editorArticleId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -75,29 +100,31 @@ export function EditorPage({ articleId }: EditorPageProps) {
   const insertMarkdown = (prefix: string, suffix: string = "") => {
     const textarea = document.querySelector("textarea");
     if (!textarea) return;
-
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = content.substring(start, end);
     const newText =
-      content.substring(0, start) +
-      prefix +
-      selectedText +
-      suffix +
-      content.substring(end);
-
+      content.substring(0, start) + prefix + selectedText + suffix + content.substring(end);
     updateContent(newText);
   };
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex-1">
           <Input
-            value={currentArticle?.title || ""}
+            value={currentArticle?.title ?? ""}
             onChange={(e) => {
               if (currentArticle) {
                 loadArticle({ ...currentArticle, title: e.target.value });
@@ -118,8 +145,11 @@ export function EditorPage({ articleId }: EditorPageProps) {
             onClick={handleSave}
             disabled={!isDirty || isSaving}
           >
-            <Save className="h-4 w-4 mr-1" />
-            {isSaving ? "保存中..." : "保存"}
+            {isSaving ? (
+              <><Loader2 className="h-4 w-4 mr-1 animate-spin" />保存中...</>
+            ) : (
+              <><Save className="h-4 w-4 mr-1" />保存</>
+            )}
           </Button>
           <Button variant="outline" size="sm" onClick={handleCopyToClipboard}>
             <Copy className="h-4 w-4 mr-1" />
@@ -134,25 +164,13 @@ export function EditorPage({ articleId }: EditorPageProps) {
 
       {/* Toolbar */}
       <div className="mb-4 flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={undo}
-          disabled={!canUndo}
-        >
+        <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo}>
           <Undo className="h-4 w-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={redo}
-          disabled={!canRedo}
-        >
+        <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo}>
           <Redo className="h-4 w-4" />
         </Button>
-
         <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
-
         <Button variant="ghost" size="sm" onClick={() => insertMarkdown("**", "**")}>
           <Bold className="h-4 w-4" />
         </Button>
@@ -162,9 +180,7 @@ export function EditorPage({ articleId }: EditorPageProps) {
         <Button variant="ghost" size="sm" onClick={() => insertMarkdown("\n- ")}>
           <List className="h-4 w-4" />
         </Button>
-
         <div className="flex-1" />
-
         <Button
           variant={showPreview ? "default" : "outline"}
           size="sm"

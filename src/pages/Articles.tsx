@@ -1,26 +1,50 @@
-import { useState } from "react";
-import { Edit, Trash2, Search } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Edit, Trash2, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useEditorStore, type Article } from "@/stores/useEditorStore";
+import { useNavigationStore } from "@/stores/useNavigationStore";
+import { listArticlesFromDB, deleteArticleFromDB } from "@/lib/db";
 import { toast } from "sonner";
 import { EmptySearch } from "@/components/features/EmptyState";
 
-// Mock articles
-const mockArticles: Article[] = [
-  { id: "1", title: "SEO 最佳实践指南", content: "# SEO 最佳实践...\n\n这是一篇关于 SEO 的文章...", status: "draft", createdAt: "2024-01-15", updatedAt: "2024-01-15" },
-  { id: "2", title: "内容营销完整教程", content: "# 内容营销...\n\n内容营销是...", status: "published", createdAt: "2024-01-10", updatedAt: "2024-01-12" },
-  { id: "3", title: "关键词研究入门", content: "# 关键词研究...\n\n关键词研究是...", status: "draft", createdAt: "2024-01-08", updatedAt: "2024-01-09" },
-  { id: "4", title: "技术 SEO 清单", content: "# 技术 SEO...\n\n技术 SEO 包括...", status: "published", createdAt: "2024-01-05", updatedAt: "2024-01-06" },
-];
-
 export function ArticlesPage() {
   const { loadArticle } = useEditorStore();
-  const [articles, setArticles] = useState<Article[]>(mockArticles);
+  const { navigate } = useNavigationStore();
+
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "draft" | "published">("all");
+
+  const loadArticles = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const rows = await listArticlesFromDB();
+      setArticles(
+        rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          content: r.content,
+          briefId: r.briefId,
+          status: r.status,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        })),
+      );
+    } catch {
+      // DB may not be initialised in dev-browser mode
+      setArticles([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadArticles();
+  }, [loadArticles]);
 
   const filteredArticles = articles.filter((article) => {
     const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -30,13 +54,18 @@ export function ArticlesPage() {
 
   const handleEdit = (article: Article) => {
     loadArticle(article);
+    navigate("editor", { articleId: article.id });
     toast.success(`已加载文章: ${article.title}`);
-    // Navigate to editor - in real app would use router
   };
 
-  const handleDelete = (id: string) => {
-    setArticles(articles.filter((a) => a.id !== id));
-    toast.success("文章已删除");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteArticleFromDB(id);
+      setArticles((prev) => prev.filter((a) => a.id !== id));
+      toast.success("文章已删除");
+    } catch (error) {
+      toast.error(`删除失败: ${error}`);
+    }
   };
 
   return (
@@ -59,77 +88,73 @@ export function ArticlesPage() {
             />
           </div>
           <div className="flex gap-2">
-            <Button
-              variant={filterStatus === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("all")}
-            >
-              全部
-            </Button>
-            <Button
-              variant={filterStatus === "draft" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("draft")}
-            >
-              草稿
-            </Button>
-            <Button
-              variant={filterStatus === "published" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("published")}
-            >
-              已发布
-            </Button>
+            {(["all", "draft", "published"] as const).map((s) => (
+              <Button
+                key={s}
+                variant={filterStatus === s ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus(s)}
+              >
+                {s === "all" ? "全部" : s === "draft" ? "草稿" : "已发布"}
+              </Button>
+            ))}
           </div>
         </CardContent>
       </Card>
 
       {/* Articles List */}
-      <div className="space-y-4">
-        {filteredArticles.length === 0 ? (
-          <EmptySearch message="没有找到匹配的文章" />
-        ) : (
-          filteredArticles.map((article) => (
-            <Card key={article.id} className="hover:border-slate-400 transition-colors">
-              <CardContent className="flex items-center gap-4 py-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium truncate">{article.title}</h3>
-                    <Badge
-                      variant={article.status === "published" ? "default" : "secondary"}
-                      className="shrink-0"
-                    >
-                      {article.status === "published" ? "已发布" : "草稿"}
-                    </Badge>
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredArticles.length === 0 ? (
+            <EmptySearch message={articles.length === 0 ? "暂无文章，请先撰写并保存文章" : "没有找到匹配的文章"} />
+          ) : (
+            filteredArticles.map((article) => (
+              <Card key={article.id} className="hover:border-slate-400 transition-colors">
+                <CardContent className="flex items-center gap-4 py-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium truncate">{article.title}</h3>
+                      <Badge
+                        variant={article.status === "published" ? "default" : "secondary"}
+                        className="shrink-0"
+                      >
+                        {article.status === "published" ? "已发布" : "草稿"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-slate-500 mt-1">
+                      创建于 {new Date(article.createdAt).toLocaleDateString()} · 更新于{" "}
+                      {new Date(article.updatedAt).toLocaleDateString()}
+                    </p>
                   </div>
-                  <p className="text-sm text-slate-500 mt-1">
-                    创建于 {article.createdAt} · 更新于 {article.updatedAt}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(article)}
-                    title="编辑"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(article.id)}
-                    title="删除"
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(article)}
+                      title="编辑"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(article.id)}
+                      title="删除"
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="mt-8 grid grid-cols-3 gap-4">

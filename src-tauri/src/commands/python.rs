@@ -17,25 +17,28 @@ pub async fn run_python_script(
         "message": "正在启动研究脚本..."
     }));
 
-    // Set up timeout (30 seconds)
-    let timeout_duration = Duration::from_secs(30);
+    let timeout_duration = Duration::from_secs(60);
 
-    let output = match tokio::process::Command::new("python3")
+    let cmd_future = tokio::process::Command::new("python3")
         .arg(script_path.to_str().unwrap_or(&script))
         .args(&args)
-        .output()
-        .await
-    {
-        Ok(out) => out,
-        Err(e) => {
-            let err_msg = if e.to_string().contains("timeout") {
-                format!("脚本执行超时（{}秒），请稍后重试", timeout_duration.as_secs())
-            } else if e.to_string().contains("No such file") {
-                format!("找不到脚本文件: {}", script)
+        .output();
+
+    let output = match tokio::time::timeout(timeout_duration, cmd_future).await {
+        Ok(Ok(out)) => out,
+        Ok(Err(e)) => {
+            let err_msg = if e.to_string().contains("No such file") {
+                format!("找不到脚本文件: {}，请确认 python-scripts 目录已正确打包", script)
             } else {
                 format!("脚本执行失败: {}", e)
             };
             return Err(err_msg);
+        }
+        Err(_) => {
+            return Err(format!(
+                "脚本执行超时（{}秒），请减少关键词数量或检查网络连接",
+                timeout_duration.as_secs()
+            ));
         }
     };
 

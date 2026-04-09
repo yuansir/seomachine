@@ -10,7 +10,7 @@ interface AppShellProps {
 export function AppShell({ children, onOpenSettings }: AppShellProps) {
   return (
     <div className="flex h-screen bg-white dark:bg-slate-900">
-      <Sidebar />
+      <Sidebar onOpenSettings={onOpenSettings} />
       <div className="flex flex-col flex-1">
         <Header onOpenSettings={onOpenSettings} />
         <main className="flex-1 overflow-auto">

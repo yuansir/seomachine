@@ -21,14 +21,12 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
   const { theme, setTheme } = useTheme();
-  const { loadSettings, claudeApiKey, dataforseoApiKey, wordpressUrl, wordpressUsername, wordpressAppPassword, setApiKey, setWordPress, isLoading } = useSettingsStore();
+  const { loadSettings, dataforseoApiKey, wordpressUrl, wordpressUsername, wordpressAppPassword, setApiKey, setWordPress, isLoading } = useSettingsStore();
 
   const [activeTab, setActiveTab] = useState("api-keys");
 
   // API Keys state
-  const [claudeKeyInput, setClaudeKeyInput] = useState("");
   const [dataforseoKeyInput, setDataforseoKeyInput] = useState("");
-  const [showClaudeKey, setShowClaudeKey] = useState(false);
 
   // WordPress state
   const [wpUrlInput, setWpUrlInput] = useState("");
@@ -55,13 +53,12 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
 
   useEffect(() => {
     if (!isLoading) {
-      setClaudeKeyInput(claudeApiKey || "");
       setDataforseoKeyInput(dataforseoApiKey || "");
       setWpUrlInput(wordpressUrl || "");
       setWpUsernameInput(wordpressUsername || "");
       setWpPasswordInput(wordpressAppPassword || "");
     }
-  }, [isLoading, claudeApiKey, dataforseoApiKey, wordpressUrl, wordpressUsername, wordpressAppPassword]);
+  }, [isLoading, dataforseoApiKey, wordpressUrl, wordpressUsername, wordpressAppPassword]);
 
   useEffect(() => {
     setLlmProvider(currentProvider);
@@ -69,18 +66,13 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
 
   const handleSaveApiKeys = async () => {
     try {
-      if (!claudeKeyInput.trim() && !dataforseoKeyInput.trim()) {
-        toast.error("请至少填写一个 API 密钥");
+      if (!dataforseoKeyInput.trim()) {
+        toast.error("请填写 DataForSEO API 密钥");
         return;
       }
-      if (claudeKeyInput.trim()) {
-        await setApiKey("claude", claudeKeyInput.trim());
-      }
-      if (dataforseoKeyInput.trim()) {
-        await setApiKey("dataforseo", dataforseoKeyInput.trim());
-      }
+      await setApiKey("dataforseo", dataforseoKeyInput.trim());
       toast.success("API 密钥已保存");
-    } catch (error) {
+    } catch {
       toast.error("保存失败");
     }
   };
@@ -140,7 +132,8 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
     toast.success('模型参数已保存');
   };
 
-  const handleLlmProviderChange = (v: string) => {
+  const handleLlmProviderChange = (v: string | null) => {
+    if (!v) return;
     const provider = v as ProviderType;
     setLlmProvider(provider);
     if (provider === 'deepseek') {
@@ -180,31 +173,12 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
             <TabsContent value="api-keys" className="mt-4 space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>API 密钥</CardTitle>
+                  <CardTitle>研究 API 密钥</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium">Claude API 密钥</label>
-                    <div className="relative mt-1">
-                      <Input
-                        type={showClaudeKey ? "text" : "password"}
-                        value={claudeKeyInput}
-                        onChange={(e) => setClaudeKeyInput(e.target.value)}
-                        placeholder="sk-..."
-                        className="pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowClaudeKey(!showClaudeKey)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-sm"
-                      >
-                        {showClaudeKey ? "隐藏" : "显示"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
                     <label className="text-sm font-medium">DataForSEO API 密钥</label>
+                    <p className="text-xs text-slate-500 mb-1">用于 SEO 研究功能（关键词分析、竞品分析等）</p>
                     <Input
                       type="password"
                       value={dataforseoKeyInput}

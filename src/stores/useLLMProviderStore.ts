@@ -14,9 +14,9 @@ interface LLMProviderState {
   setProvider: (provider: ProviderType) => void;
   setApiKey: (key: string) => Promise<void>;
   setBaseURL: (url: string) => Promise<void>;
-  setModel: (model: string) => void;
-  setTemperature: (temp: number) => void;
-  setMaxTokens: (tokens: number) => void;
+  setModel: (model: string) => Promise<void>;
+  setTemperature: (temp: number) => Promise<void>;
+  setMaxTokens: (tokens: number) => Promise<void>;
   loadConfig: () => Promise<void>;
   getConfig: () => LLMConfig;
 }
@@ -49,6 +49,10 @@ export const useLLMProviderStore = create<LLMProviderState>()((set, get) => ({
       });
     }
     set(newState);
+    // Persist provider choice
+    getStore().then((s) => {
+      s.set('llmProvider', provider).then(() => s.save());
+    });
   },
 
   setApiKey: async (apiKey) => {
@@ -65,9 +69,24 @@ export const useLLMProviderStore = create<LLMProviderState>()((set, get) => ({
     set({ baseURL });
   },
 
-  setModel: (model) => set({ model }),
-  setTemperature: (temperature) => set({ temperature }),
-  setMaxTokens: (maxTokens) => set({ maxTokens }),
+  setModel: async (model) => {
+    const s = await getStore();
+    await s.set('llmModel', model);
+    await s.save();
+    set({ model });
+  },
+  setTemperature: async (temperature) => {
+    const s = await getStore();
+    await s.set('llmTemperature', temperature);
+    await s.save();
+    set({ temperature });
+  },
+  setMaxTokens: async (maxTokens) => {
+    const s = await getStore();
+    await s.set('llmMaxTokens', maxTokens);
+    await s.save();
+    set({ maxTokens });
+  },
 
   loadConfig: async () => {
     set({ isLoading: true });

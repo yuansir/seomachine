@@ -1,18 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Play, Save, FileText, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWriteStore } from "@/stores/useWriteStore";
-import { useResearchStore } from "@/stores/useResearchStore";
+import { useNavigationStore } from "@/stores/useNavigationStore";
 import { useLLMProviderStore } from "@/stores/useLLMProviderStore";
 import { createDeepSeekProvider, createOpenAICompatProvider } from "@/lib/llm";
+import { listResearchFromDB, type DBResearchResult } from "@/lib/db";
 import type { LLMMessage } from "@/lib/llm/types";
+import type { ResearchBrief, ArticleConfig } from "@/stores/useWriteStore";
 import { toast } from "sonner";
 import { EmptyArticle } from "@/components/features/EmptyState";
 import { ProgressBar } from "@/components/features/ProgressBar";
-import type { ResearchBrief, ArticleConfig } from "@/stores/useWriteStore";
 
 export function WritePage() {
   const {
@@ -29,13 +30,26 @@ export function WritePage() {
     saveArticle,
   } = useWriteStore();
 
-  const { results: savedResearch } = useResearchStore();
+  const { navigate } = useNavigationStore();
   const [isSaving, setIsSaving] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [savedBriefs, setSavedBriefs] = useState<DBResearchResult[]>([]);
+
+  // Load saved research briefs from DB on mount
+  useEffect(() => {
+    listResearchFromDB()
+      .then(setSavedBriefs)
+      .catch(() => {/* DB not available in dev mode */});
+  }, []);
 
   const handleSelectBrief = (briefId: string) => {
-    if (savedResearch && savedResearch.id === briefId) {
-      selectBrief(savedResearch);
+    const dbBrief = savedBriefs.find((b) => b.id === briefId);
+    if (!dbBrief) return;
+    try {
+      const parsed = JSON.parse(dbBrief.content) as ResearchBrief;
+      selectBrief({ ...parsed, id: briefId });
+    } catch {
+      toast.error("研究简报数据解析失败");
     }
   };
 
@@ -51,40 +65,32 @@ export function WritePage() {
       return;
     }
 
-    // Create abort controller
     const controller = new AbortController();
     setAbortController(controller);
-
     setIsGenerating(true);
     setProgress(0);
-    setGeneratedContent('');
+    setGeneratedContent("");
 
     try {
-      // Build messages from research brief
       const messages: LLMMessage[] = buildArticlePrompt(selectedBrief, articleConfig);
 
-      // Create provider based on selection
-      const provider = config.provider === 'deepseek'
-        ? createDeepSeekProvider(config.getConfig())
-        : createOpenAICompatProvider(config.getConfig());
+      const provider =
+        config.provider === "deepseek"
+          ? createDeepSeekProvider(config.getConfig())
+          : createOpenAICompatProvider(config.getConfig());
 
-      // Generate with streaming
       const generated = await provider.generate(messages, {
         temperature: config.temperature,
         maxTokens: config.maxTokens,
         signal: controller.signal,
-        onChunk: (text) => {
-          setGeneratedContent(text);
-        },
-        onProgress: (progress) => {
-          setProgress(progress);
-        },
+        onChunk: (text) => setGeneratedContent(text),
+        onProgress: (p) => setProgress(p),
       });
 
       setGeneratedContent(generated);
       toast.success("文章生成完成！");
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         toast.info("生成已取消");
       } else {
         toast.error(`生成失败: ${error}`);
@@ -95,35 +101,41 @@ export function WritePage() {
     }
   };
 
-  // Helper function to build prompt from research brief
   function buildArticlePrompt(brief: ResearchBrief | null, config: ArticleConfig): LLMMessage[] {
+    const lengthMap = { short: "~500字", medium: "~1000字", long: "~2000字" };
+    const styleMap = { professional: "专业正式", conversational: "通俗易懂", technical: "技术深入" };
+
     const systemPrompt = `你是一个专业的SEO文章写作助手。请根据用户提供的关键词和研究数据，生成一篇SEO优化的高质量文章。
 
 要求：
-- 文章结构清晰，包含H1、H2、H3标题
+- 文章结构清晰，包含H1、H2、H3标题（使用Markdown格式）
 - 内容深度足够，有实际价值
 - 适当融入关键词，但不要堆砌
-- 包含内部链接和外部链接的建议位置
-- 字数要求：短篇约500字，中篇约1000字，长篇约2000字`;
+- 包含内部链接和外部链接的建议（用Markdown格式）
+- 字数要求：${lengthMap[config.length]}
+- 风格：${styleMap[config.style]}`;
 
     const userContent = brief
-      ? `关键词：${brief.keywords.map(k => k.keyword).join(', ')}
+      ? `关键词：${brief.keywords.map((k) => k.keyword).join(", ")}
 SEO评分：${brief.seoScore}/100
-内容建议：${brief.contentSuggestions.map(s => `- ${s.title}: ${s.description}`).join('\n')}`
+内容建议：${brief.contentSuggestions.map((s) => `- ${s.title}: ${s.metaDescription}`).join("\n")}`
       : `文章标题：${config.title}`;
 
     return [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userContent },
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userContent },
     ];
   }
 
   const handleSave = async () => {
+    if (!generatedContent) return;
     setIsSaving(true);
     try {
       const article = await saveArticle();
       if (article) {
-        toast.success("文章已保存");
+        toast.success("文章已保存，正在跳转到编辑器...");
+        // Navigate to editor with the saved article id
+        setTimeout(() => navigate("editor", { articleId: article.id }), 800);
       }
     } catch (error) {
       toast.error(`保存失败: ${error}`);
@@ -133,7 +145,9 @@ SEO评分：${brief.seoScore}/100
   };
 
   const handleOpenInEditor = () => {
-    toast.info("将在编辑器中打开...");
+    if (!generatedContent) return;
+    // Navigate to editor, content will be pre-loaded from Write store
+    navigate("editor");
   };
 
   return (
@@ -152,18 +166,23 @@ SEO评分：${brief.seoScore}/100
             </CardHeader>
             <CardContent className="space-y-4">
               <Select
-                value={selectedBrief?.id || ""}
+                value={selectedBrief?.id ?? ""}
                 onValueChange={(v) => v && handleSelectBrief(v)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择研究简报..." />
+                  <SelectValue placeholder="选择已保存的研究简报..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {savedResearch && (
-                    <SelectItem value={savedResearch.id}>
-                      {savedResearch.keywords[0]?.keyword || "当前研究"}
+                  {savedBriefs.length === 0 && (
+                    <SelectItem value="_none" disabled>
+                      暂无已保存的研究简报
                     </SelectItem>
                   )}
+                  {savedBriefs.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.topic} ({b.researchType})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -186,7 +205,7 @@ SEO评分：${brief.seoScore}/100
                 <Input
                   value={articleConfig.title}
                   onChange={(e) => updateConfig({ title: e.target.value })}
-                  placeholder="文章标题..."
+                  placeholder="文章标题（可选）"
                   className="mt-1"
                 />
               </div>
@@ -212,7 +231,9 @@ SEO评分：${brief.seoScore}/100
                 <label className="text-sm font-medium">内容风格</label>
                 <Select
                   value={articleConfig.style}
-                  onValueChange={(v) => updateConfig({ style: v as "professional" | "conversational" | "technical" })}
+                  onValueChange={(v) =>
+                    updateConfig({ style: v as "professional" | "conversational" | "technical" })
+                  }
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue />
@@ -258,8 +279,11 @@ SEO评分：${brief.seoScore}/100
               {generatedContent && (
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
-                    <Save className="h-4 w-4 mr-1" />
-                    {isSaving ? "保存中..." : "保存"}
+                    {isSaving ? (
+                      <><Loader2 className="h-4 w-4 mr-1 animate-spin" />保存中...</>
+                    ) : (
+                      <><Save className="h-4 w-4 mr-1" />保存到数据库</>
+                    )}
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleOpenInEditor}>
                     <FileText className="h-4 w-4 mr-1" />
@@ -271,9 +295,7 @@ SEO评分：${brief.seoScore}/100
             <CardContent>
               {generatedContent ? (
                 <div className="prose dark:prose-invert max-w-none">
-                  <pre className="whitespace-pre-wrap text-sm font-sans">
-                    {generatedContent}
-                  </pre>
+                  <pre className="whitespace-pre-wrap text-sm font-sans">{generatedContent}</pre>
                 </div>
               ) : (
                 <EmptyArticle />

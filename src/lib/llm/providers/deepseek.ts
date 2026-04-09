@@ -21,7 +21,6 @@ export function createDeepSeekProvider(config: LLMConfig): LLMProvider {
         temperature: options.temperature ?? config.temperature,
         max_tokens: options.maxTokens ?? config.maxTokens,
         stream: true,
-        stream_options: { include_usage: true },
       }, { signal: options.signal });
 
       let fullContent = '';

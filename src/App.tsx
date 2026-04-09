@@ -10,10 +10,9 @@ import { AnalysisPage } from "@/pages/Analysis";
 import { PublishPage } from "@/pages/Publish";
 import { ArticlesPage } from "@/pages/Articles";
 import { GlobalErrorBoundary } from "@/components/features/ErrorBoundary";
+import { useNavigationStore } from "@/stores/useNavigationStore";
 
-type Page = "home" | "research" | "write" | "editor" | "analysis" | "publish" | "articles" | "settings";
-
-const pageTitles: Record<Page, string> = {
+const pageTitles = {
   home: "欢迎使用 SEO Machine",
   research: "研究",
   write: "撰写",
@@ -21,10 +20,9 @@ const pageTitles: Record<Page, string> = {
   analysis: "分析",
   publish: "发布",
   articles: "文章",
-  settings: "设置",
-};
+} as const;
 
-const pageDescriptions: Record<Page, string> = {
+const pageDescriptions = {
   home: "创建 SEO 优化内容的最简单方式",
   research: "研究和分析关键词",
   write: "撰写 SEO 优化内容",
@@ -32,39 +30,13 @@ const pageDescriptions: Record<Page, string> = {
   analysis: "分析内容表现",
   publish: "发布内容到 WordPress",
   articles: "管理所有文章",
-  settings: "配置应用程序设置",
-};
+} as const;
 
 function App() {
   useTheme(); // Apply theme on mount
 
-  const [currentPage, setCurrentPage] = useState<Page>("home");
+  const { currentPage, navigate } = useNavigationStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  // Listen for navigation changes from sidebar
-  useState(() => {
-    const handleNavigation = () => {
-      const path = window.location.pathname;
-      if (path === "/settings") {
-        setSettingsOpen(true);
-      } else {
-        const page = path.slice(1) as Page;
-        if (page in pageTitles) {
-          setCurrentPage(page);
-        }
-      }
-    };
-
-    // Check initial path
-    handleNavigation();
-
-    // Listen for popstate events (back/forward navigation)
-    window.addEventListener("popstate", handleNavigation);
-
-    return () => {
-      window.removeEventListener("popstate", handleNavigation);
-    };
-  });
 
   const handleOpenSettings = () => {
     setSettingsOpen(true);
@@ -85,10 +57,17 @@ function App() {
             <div className="mt-8 grid grid-cols-2 gap-4">
               <Card
                 className="p-4 cursor-pointer hover:border-blue-500 transition-colors"
-                onClick={() => setCurrentPage("settings")}
+                onClick={() => setSettingsOpen(true)}
               >
                 <h3 className="font-medium">开始使用</h3>
                 <p className="text-sm text-slate-500 mt-1">配置 API 密钥</p>
+              </Card>
+              <Card
+                className="p-4 cursor-pointer hover:border-blue-500 transition-colors"
+                onClick={() => navigate("research")}
+              >
+                <h3 className="font-medium">开始研究</h3>
+                <p className="text-sm text-slate-500 mt-1">分析关键词和竞争对手</p>
               </Card>
             </div>
           )}
@@ -115,12 +94,6 @@ function App() {
 
           {currentPage === "articles" && (
             <ArticlesPage />
-          )}
-
-          {currentPage !== "home" && currentPage !== "research" && currentPage !== "write" && currentPage !== "editor" && currentPage !== "analysis" && currentPage !== "publish" && currentPage !== "articles" && (
-            <div className="mt-8">
-              <p className="text-slate-400">Coming Soon</p>
-            </div>
           )}
         </div>
       </AppShell>

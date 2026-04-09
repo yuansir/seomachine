@@ -1,8 +1,12 @@
 import { create } from "zustand";
+import { saveArticleToDB } from "@/lib/db";
 import type { ResearchResult } from "./useResearchStore";
 
 export type ArticleLength = "short" | "medium" | "long";
 export type ContentStyle = "professional" | "conversational" | "technical";
+
+// Alias so Write.tsx can import the same name it already uses
+export type ResearchBrief = ResearchResult;
 
 export interface ArticleConfig {
   title: string;
@@ -62,11 +66,8 @@ export const useWriteStore = create<WriteState>()((set, get) => ({
     })),
 
   setGeneratedContent: (content) => set({ generatedContent: content }),
-
   setIsGenerating: (isGenerating) => set({ isGenerating }),
-
   setProgress: (progress) => set({ progress }),
-
   setError: (error) => set({ error }),
 
   handleWriteError: (error: unknown) => {
@@ -75,20 +76,26 @@ export const useWriteStore = create<WriteState>()((set, get) => ({
   },
 
   saveArticle: async () => {
-    const { generatedContent, articleConfig } = get();
+    const { generatedContent, articleConfig, selectedBrief } = get();
     if (!generatedContent) return null;
 
-    const article: GeneratedArticle = {
-      id: crypto.randomUUID(),
-      title: articleConfig.title || "Untitled Article",
+    const title = articleConfig.title.trim() || "未命名文章";
+    const id = await saveArticleToDB({
+      title,
       content: generatedContent,
-      briefId: get().selectedBrief?.id,
+      status: "draft",
+      briefId: selectedBrief?.id,
+    });
+
+    const article: GeneratedArticle = {
+      id,
+      title,
+      content: generatedContent,
+      briefId: selectedBrief?.id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // TODO: Save to database via Rust command
-    console.log("Article saved:", article);
     return article;
   },
 
@@ -103,3 +110,4 @@ export const useWriteStore = create<WriteState>()((set, get) => ({
       error: null,
     }),
 }));
+
